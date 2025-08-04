@@ -26,10 +26,23 @@ const votingResults = document.getElementById('voting-results');
 const resultsGrid = document.getElementById('results-grid');
 const votingStats = document.getElementById('voting-stats');
 
+// Jira import elements
+const jiraImportSection = document.getElementById('jira-import-section');
+const toggleJiraImportBtn = document.getElementById('toggle-jira-import');
+const jiraImportContent = document.getElementById('jira-import-content');
+const jiraSearchInput = document.getElementById('jira-search-input');
+const jiraSearchBtn = document.getElementById('jira-search-btn');
+const jiraFilterBtns = document.querySelectorAll('.jira-filter-btn');
+const jiraResults = document.getElementById('jira-results');
+const jiraStoriesList = document.getElementById('jira-stories-list');
+const jiraResultsCount = document.getElementById('jira-results-count');
+
 // State
 let currentRoom = null;
 let currentUser = null;
 let hasVoted = false;
+let jiraStories = [];
+let currentStoryFromJira = null;
 
 // Utility functions
 function showNotification(message, type = 'info') {
@@ -149,6 +162,21 @@ function showVotingResults(room, stats) {
                 </div>
             </div>
         `;
+        
+        // Add save to Jira button if we have a Jira story
+        if (currentStoryFromJira && stats.average) {
+            const saveToJiraBtn = document.createElement('button');
+            saveToJiraBtn.className = 'jira-save-btn';
+            saveToJiraBtn.textContent = `💾 Save ${stats.average} points to ${currentStoryFromJira.key}`;
+            saveToJiraBtn.style.marginTop = '15px';
+            saveToJiraBtn.style.width = '100%';
+            
+            saveToJiraBtn.addEventListener('click', () => {
+                saveEstimateToJira(currentStoryFromJira.key, stats.average, room.id);
+            });
+            
+            votingStats.appendChild(saveToJiraBtn);
+        }
     }
 
     votingResults.style.display = 'block';
@@ -218,6 +246,9 @@ socket.on('room-created', (data) => {
     createVotingCards(data.room.cardValues);
     updateParticipants(data.room);
     showNotification('Room created successfully!', 'success');
+    
+    // Check Jira configuration
+    checkJiraConfiguration();
 });
 
 socket.on('room-joined', (data) => {
@@ -238,6 +269,9 @@ socket.on('room-joined', (data) => {
     }
     
     showNotification('Joined room successfully!', 'success');
+    
+    // Check Jira configuration
+    checkJiraConfiguration();
 });
 
 socket.on('user-joined', (data) => {
@@ -302,6 +336,226 @@ socket.on('votes-cleared', (data) => {
     updateParticipants(data.room);
     updateRevealButton(data.room);
     showNotification('New voting round started!', 'info');
+});
+
+// Jira Integration Functions
+async function checkJiraConfiguration() {
+    try {
+        const response = await fetch('/api/jira/status');
+        const status = await response.json();
+        
+        if (status.enabled) {
+            jiraImportSection.style.display = 'block';
+            return true;
+        } else {
+            jiraImportSection.style.display = 'none';
+            return false;
+        }
+    } catch (error) {
+        console.error('Failed to check Jira config:', error);
+        jiraImportSection.style.display = 'none';
+        return false;
+    }
+}
+
+function toggleJiraImport() {
+    const isVisible = jiraImportContent.style.display !== 'none';
+    jiraImportContent.style.display = isVisible ? 'none' : 'block';
+    toggleJiraImportBtn.textContent = isVisible ? 'Show Jira Import' : 'Hide Jira Import';
+}
+
+async function searchJiraStories(query = '', quickFilter = '') {
+    try {
+        jiraStoriesList.innerHTML = '<div class="jira-loading">🔍 Searching Jira stories...</div>';
+        jiraResults.style.display = 'block';
+        
+        let jql = '';
+        
+        if (quickFilter) {
+            switch (quickFilter) {
+                case 'unestimated':
+                    jql = 'cf[10016] is EMPTY AND status != Done ORDER BY created DESC';
+                    break;
+                case 'current-sprint':
+                    jql = 'sprint in openSprints() ORDER BY rank';
+                    break;
+                case 'backlog':
+                    jql = 'sprint is EMPTY AND status != Done ORDER BY priority DESC';
+                    break;
+            }
+        } else if (query) {
+            // If it looks like JQL, use it directly
+            if (query.toLowerCase().includes('project') || query.toLowerCase().includes('status') || query.toLowerCase().includes('sprint')) {
+                jql = query;
+            } else {
+                // Otherwise, search in summary and description
+                jql = `(summary ~ "${query}" OR description ~ "${query}") AND status != Done ORDER BY created DESC`;
+            }
+        } else {
+            jql = 'status != Done ORDER BY created DESC';
+        }
+        
+        const response = await fetch('/api/jira/search-public', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                jql: jql,
+                maxResults: 50
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            jiraStories = result.issues;
+            displayJiraStories(result.issues);
+            jiraResultsCount.textContent = `${result.issues.length} stories found`;
+        } else {
+            jiraStoriesList.innerHTML = `<div class="jira-error">❌ ${result.error}</div>`;
+            jiraResultsCount.textContent = '0 stories found';
+        }
+    } catch (error) {
+        console.error('Jira search error:', error);
+        jiraStoriesList.innerHTML = '<div class="jira-error">❌ Failed to search Jira stories</div>';
+        jiraResultsCount.textContent = '0 stories found';
+    }
+}
+
+function displayJiraStories(stories) {
+    if (stories.length === 0) {
+        jiraStoriesList.innerHTML = '<div class="jira-loading">No stories found</div>';
+        return;
+    }
+    
+    jiraStoriesList.innerHTML = stories.map(story => `
+        <div class="jira-story-item" data-story-key="${story.key}">
+            <div class="jira-story-header">
+                <span class="jira-story-key">${story.key}</span>
+                <span class="jira-story-points ${story.storyPoints ? '' : 'empty'}">${story.storyPoints || '?'}</span>
+            </div>
+            <div class="jira-story-title">${story.summary}</div>
+            <div class="jira-story-description">${story.description || 'No description'}</div>
+            <div class="jira-story-meta">
+                <span class="jira-story-status">📊 ${story.status || 'Unknown'}</span>
+                ${story.assignee ? `<span class="jira-story-assignee">👤 ${story.assignee}</span>` : ''}
+                ${story.priority ? `<span class="jira-story-priority">⚡ ${story.priority}</span>` : ''}
+            </div>
+            <div class="jira-import-actions">
+                <button class="jira-import-btn" onclick="importStoryToRoom('${story.key}')">📥 Import Story</button>
+                ${story.url ? `<a href="${story.url}" target="_blank" class="btn btn-secondary" style="font-size: 12px; padding: 8px 12px;">🔗 View in Jira</a>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function importStoryToRoom(storyKey) {
+    const story = jiraStories.find(s => s.key === storyKey);
+    if (!story) {
+        showNotification('Story not found', 'error');
+        return;
+    }
+    
+    currentStoryFromJira = story;
+    
+    // Format the story for the poker session
+    const storyText = `[${story.key}] ${story.summary}\n\n${story.description || 'No description provided'}`;
+    
+    // Set it in the story input
+    storyInput.value = storyText;
+    
+    // Automatically set the story
+    socket.emit('setStory', {
+        roomId: currentRoom.id,
+        story: storyText,
+        jiraKey: story.key,
+        jiraUrl: story.url
+    });
+    
+    // Show success message
+    showNotification(`📥 Imported: ${story.key}`, 'success');
+    
+    // Hide Jira import section
+    jiraImportContent.style.display = 'none';
+    toggleJiraImportBtn.textContent = 'Show Jira Import';
+}
+
+async function saveEstimateToJira(storyKey, storyPoints, roomId) {
+    if (!currentStoryFromJira || currentStoryFromJira.key !== storyKey) {
+        return;
+    }
+    
+    try {
+        const comment = `Story estimated in RzzRzz Poker session (Room: ${roomId})\nTeam consensus: ${storyPoints} story points`;
+        
+        const response = await fetch('/api/jira/update-story-points-public', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                issueKey: storyKey,
+                storyPoints: parseInt(storyPoints),
+                comment: comment
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(`✅ Saved ${storyPoints} points to ${storyKey} in Jira`, 'success');
+            
+            // Add a "Save to Jira" button to the voting results
+            const saveToJiraBtn = document.createElement('button');
+            saveToJiraBtn.className = 'jira-save-btn';
+            saveToJiraBtn.textContent = '✅ Saved to Jira';
+            saveToJiraBtn.disabled = true;
+            saveToJiraBtn.style.marginTop = '10px';
+            
+            if (!votingStats.querySelector('.jira-save-btn')) {
+                votingStats.appendChild(saveToJiraBtn);
+            }
+        } else {
+            showNotification(`❌ Failed to save to Jira: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Save to Jira error:', error);
+        showNotification('❌ Failed to save estimate to Jira', 'error');
+    }
+}
+
+// Jira Event Listeners
+if (toggleJiraImportBtn) {
+    toggleJiraImportBtn.addEventListener('click', toggleJiraImport);
+}
+
+if (jiraSearchBtn) {
+    jiraSearchBtn.addEventListener('click', () => {
+        const query = jiraSearchInput.value.trim();
+        searchJiraStories(query);
+    });
+}
+
+if (jiraSearchInput) {
+    jiraSearchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const query = jiraSearchInput.value.trim();
+            searchJiraStories(query);
+        }
+    });
+}
+
+jiraFilterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        // Remove active class from all buttons
+        jiraFilterBtns.forEach(b => b.classList.remove('active'));
+        // Add active class to clicked button
+        btn.classList.add('active');
+        
+        const filter = btn.getAttribute('data-filter');
+        searchJiraStories('', filter);
+    });
 });
 
 socket.on('error', (data) => {

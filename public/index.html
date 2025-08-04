@@ -63,6 +63,36 @@
                 <div id="current-story" class="current-story"></div>
             </div>
 
+            <!-- Jira Import Section -->
+            <div id="jira-import-section" class="jira-import-section" style="display: none;">
+                <div class="jira-header">
+                    <h3>📋 Import from Jira</h3>
+                    <button id="toggle-jira-import" class="btn btn-secondary">Show Jira Import</button>
+                </div>
+                <div id="jira-import-content" class="jira-import-content" style="display: none;">
+                    <div class="jira-search">
+                        <div class="search-controls">
+                            <input type="text" id="jira-search-input" placeholder="Search stories or enter JQL..." class="jira-search-input">
+                            <button id="jira-search-btn" class="btn btn-primary">🔍 Search</button>
+                        </div>
+                        <div class="jira-quick-filters">
+                            <button class="jira-filter-btn" data-filter="unestimated">📊 Unestimated</button>
+                            <button class="jira-filter-btn" data-filter="current-sprint">🏃 Current Sprint</button>
+                            <button class="jira-filter-btn" data-filter="backlog">📚 Backlog</button>
+                        </div>
+                    </div>
+                    <div id="jira-results" class="jira-results" style="display: none;">
+                        <div class="jira-results-header">
+                            <h4>Jira Stories</h4>
+                            <div id="jira-results-count"></div>
+                        </div>
+                        <div id="jira-stories-list" class="jira-stories-list">
+                            Loading...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="voting-section">
                 <h3>Choose Your Estimate</h3>
                 <div id="voting-cards" class="voting-cards"></div>

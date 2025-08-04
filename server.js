@@ -245,6 +245,69 @@ app.post('/api/jira/search', adminAuth.requireAdmin, async (req, res) => {
   }
 });
 
+// Public Jira endpoints (for room users)
+app.get('/api/jira/status', async (req, res) => {
+  try {
+    const config = jira.getConfig();
+    res.json({ 
+      enabled: config.enabled && config.hasApiToken,
+      configured: !!config.url
+    });
+  } catch (error) {
+    console.error('Jira status error:', error);
+    res.status(500).json({ error: 'Failed to get Jira status' });
+  }
+});
+
+app.post('/api/jira/search-public', async (req, res) => {
+  try {
+    const { jql, maxResults = 50 } = req.body;
+    
+    if (!jql) {
+      return res.status(400).json({ error: 'JQL query is required' });
+    }
+    
+    const result = await jira.searchIssues(jql, undefined, maxResults);
+    res.json(result);
+  } catch (error) {
+    console.error('Jira public search error:', error);
+    res.status(500).json({ error: 'Failed to search Jira issues' });
+  }
+});
+
+app.post('/api/jira/update-story-points-public', async (req, res) => {
+  try {
+    const { issueKey, storyPoints, comment } = req.body;
+    
+    if (!issueKey || storyPoints === undefined) {
+      return res.status(400).json({ error: 'Issue key and story points are required' });
+    }
+    
+    const result = await jira.updateIssueStoryPoints(issueKey, storyPoints, comment);
+    
+    if (result.success) {
+      // Log story points update
+      await historyLogger.logAction({
+        action: 'jira_story_points_updated',
+        userName: 'poker_user',
+        roomId: null,
+        details: { 
+          issueKey,
+          storyPoints,
+          comment: comment || null
+        },
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Jira public update story points error:', error);
+    res.status(500).json({ error: 'Failed to update story points in Jira' });
+  }
+});
+
 app.post('/api/jira/update-story-points', adminAuth.requireAdmin, async (req, res) => {
   try {
     const { issueKey, storyPoints, comment } = req.body;
