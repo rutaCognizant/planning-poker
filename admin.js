@@ -61,7 +61,7 @@ class AdminAuth {
         return req.session && req.session.isAdmin === true;
     }
 
-    requireAdmin(req, res, next) {
+    requireAdmin = (req, res, next) => {
         if (this.isAdminSession(req)) {
             next();
         } else {
