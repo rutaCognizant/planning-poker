@@ -199,8 +199,6 @@ class Room {
   }
 
   getVotingStats() {
-    if (!this.votingRevealed) return null;
-    
     const votes = Array.from(this.votes.values()).filter(v => v !== '?' && v !== '☕');
     const numericVotes = votes.map(v => parseInt(v)).filter(v => !isNaN(v));
     
