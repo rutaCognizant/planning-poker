@@ -99,6 +99,60 @@ app.get('/api/admin/actions', adminAuth.requireAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/download-database', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const dbPath = historyLogger.dbPath;
+    
+    // Check if database file exists
+    if (!fs.existsSync(dbPath)) {
+      return res.status(404).json({ error: 'Database file not found' });
+    }
+    
+    // Get file stats for proper headers
+    const stats = fs.statSync(dbPath);
+    const fileName = `rzzrzz-poker-backup-${new Date().toISOString().split('T')[0]}.db`;
+    
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Cache-Control', 'no-cache');
+    
+    // Log the download action
+    await historyLogger.logAction({
+      action: 'database_downloaded',
+      userName: req.session.adminUsername || 'admin',
+      roomId: null,
+      details: { 
+        fileName: fileName,
+        fileSize: stats.size,
+        downloadedBy: req.session.adminUsername
+      },
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+    
+    // Stream the file
+    const readStream = fs.createReadStream(dbPath);
+    
+    readStream.on('error', (err) => {
+      console.error('Database download error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to download database' });
+      }
+    });
+    
+    readStream.pipe(res);
+    
+  } catch (error) {
+    console.error('Database download error:', error);
+    res.status(500).json({ error: 'Failed to download database' });
+  }
+});
+
 // In-memory storage for rooms and sessions
 const rooms = new Map();
 

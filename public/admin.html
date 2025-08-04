@@ -208,6 +208,17 @@
                 </div>
             </div>
 
+            <!-- Database Management -->
+            <div class="filters">
+                <h3>🗄️ Database Management</h3>
+                <div class="filter-row">
+                    <button id="download-db-btn" class="btn btn-secondary">📥 Download Database Backup</button>
+                    <span style="color: #64748b; font-size: 0.9em; margin-left: 15px;">
+                        SQLite database file with all action history
+                    </span>
+                </div>
+            </div>
+
             <!-- Filters -->
             <div class="filters">
                 <h3>🔍 Filter Actions</h3>
@@ -227,6 +238,7 @@
                         <option value="votes_revealed">Votes Revealed</option>
                         <option value="story_set">Story Set</option>
                         <option value="admin_login_attempt">Admin Login</option>
+                        <option value="database_downloaded">Database Downloaded</option>
                     </select>
                     
                     <button id="apply-filters" class="btn btn-primary">Apply</button>
@@ -282,6 +294,9 @@
         const applyFiltersBtn = document.getElementById('apply-filters');
         const clearFiltersBtn = document.getElementById('clear-filters');
 
+        // Database management elements
+        const downloadDbBtn = document.getElementById('download-db-btn');
+
         // Actions elements
         const actionsLoading = document.getElementById('actions-loading');
         const actionsList = document.getElementById('actions-list');
@@ -315,7 +330,7 @@
             if (action.includes('join')) return 'action-join';
             if (action.includes('vote')) return 'action-vote';
             if (action.includes('reveal')) return 'action-reveal';
-            if (action.includes('admin')) return 'action-admin';
+            if (action.includes('admin') || action.includes('database_downloaded')) return 'action-admin';
             return '';
         }
 
@@ -402,6 +417,53 @@
             }
         }
 
+        async function downloadDatabase() {
+            try {
+                downloadDbBtn.disabled = true;
+                downloadDbBtn.textContent = '⏳ Preparing Download...';
+                
+                const response = await fetch('/api/admin/download-database');
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Download failed');
+                }
+                
+                // Get the filename from the response headers
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'rzzrzz-poker-backup.db';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                
+                // Create blob and download link
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                // Clean up
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showNotification(`Database downloaded: ${filename}`, 'success');
+                
+            } catch (error) {
+                console.error('Database download error:', error);
+                showNotification(`Download failed: ${error.message}`, 'error');
+            } finally {
+                downloadDbBtn.disabled = false;
+                downloadDbBtn.textContent = '📥 Download Database Backup';
+            }
+        }
+
         function showLogin() {
             loginSection.classList.remove('hidden');
             dashboardSection.classList.add('hidden');
@@ -449,6 +511,8 @@
             currentFilters = {};
             loadActions();
         });
+
+        downloadDbBtn.addEventListener('click', downloadDatabase);
 
         // Auto-refresh actions every 30 seconds
         setInterval(() => {
