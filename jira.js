@@ -10,7 +10,8 @@ class JiraIntegration {
             email: null,
             apiToken: null,
             projects: [],
-            enabled: false
+            enabled: false,
+            storyPointsField: null
         };
         this.configFile = path.join(__dirname, 'jira-config.json');
         this.loadConfig();
@@ -132,6 +133,70 @@ class JiraIntegration {
         }
     }
 
+    async detectStoryPointsField() {
+        try {
+            // Get field configurations to find Story Points field
+            const fields = await this.makeJiraRequest('/rest/api/3/field');
+            
+            // Look for Story Points field by name
+            const storyPointsField = fields.find(field => 
+                field.name.toLowerCase().includes('story points') ||
+                field.name.toLowerCase().includes('story point') ||
+                field.name.toLowerCase() === 'points' ||
+                field.id === 'customfield_10016' // fallback to common default
+            );
+            
+            if (storyPointsField) {
+                this.config.storyPointsField = storyPointsField.id;
+                this.saveConfig();
+                return {
+                    success: true,
+                    fieldId: storyPointsField.id,
+                    fieldName: storyPointsField.name
+                };
+            } else {
+                // Try alternative method - look at create metadata for a story
+                try {
+                    const projects = await this.getProjects();
+                    if (projects.success && projects.projects.length > 0) {
+                        const projectKey = projects.projects[0].key;
+                        const metadata = await this.makeJiraRequest(`/rest/api/3/issue/createmeta?projectKeys=${projectKey}&expand=projects.issuetypes.fields`);
+                        
+                        if (metadata.projects && metadata.projects[0] && metadata.projects[0].issuetypes) {
+                            for (const issueType of metadata.projects[0].issuetypes) {
+                                if (issueType.fields) {
+                                    for (const [fieldId, fieldInfo] of Object.entries(issueType.fields)) {
+                                        if (fieldInfo.name && fieldInfo.name.toLowerCase().includes('story point')) {
+                                            this.config.storyPointsField = fieldId;
+                                            this.saveConfig();
+                                            return {
+                                                success: true,
+                                                fieldId: fieldId,
+                                                fieldName: fieldInfo.name
+                                            };
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (metaError) {
+                    console.error('Error getting create metadata:', metaError);
+                }
+                
+                return {
+                    success: false,
+                    error: 'Story Points field not found. Please check your Jira configuration.'
+                };
+            }
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
     async getProjects() {
         try {
             const projects = await this.makeJiraRequest('/rest/api/3/project/search?maxResults=100');
@@ -152,7 +217,11 @@ class JiraIntegration {
         }
     }
 
-    async searchIssues(jql, fields = ['summary', 'description', 'status', 'assignee', 'priority', 'customfield_10016'], maxResults = 50) {
+    async searchIssues(jql, fields = null, maxResults = 50) {
+        if (!fields) {
+            const storyPointsField = this.config.storyPointsField || 'customfield_10016';
+            fields = ['summary', 'description', 'status', 'assignee', 'priority', storyPointsField];
+        }
         try {
             const searchBody = {
                 jql,
@@ -175,7 +244,7 @@ class JiraIntegration {
                     status: issue.fields.status?.name,
                     assignee: issue.fields.assignee?.displayName,
                     priority: issue.fields.priority?.name,
-                    storyPoints: issue.fields.customfield_10016 || null,
+                    storyPoints: issue.fields[this.config.storyPointsField || 'customfield_10016'] || null,
                     url: `${this.config.url}/browse/${issue.key}`
                 })),
                 total: result.total
@@ -231,9 +300,21 @@ class JiraIntegration {
 
     async updateIssueStoryPoints(issueKey, storyPoints, comment = null) {
         try {
+            // Auto-detect story points field if not already detected
+            if (!this.config.storyPointsField) {
+                const detection = await this.detectStoryPointsField();
+                if (!detection.success) {
+                    return {
+                        success: false,
+                        error: `Story Points field not found: ${detection.error}`
+                    };
+                }
+            }
+            
+            const storyPointsField = this.config.storyPointsField || 'customfield_10016';
             const updateBody = {
                 fields: {
-                    customfield_10016: storyPoints // Standard story points field
+                    [storyPointsField]: storyPoints
                 }
             };
 

@@ -229,6 +229,32 @@ app.get('/api/jira/projects', adminAuth.requireAdmin, async (req, res) => {
   }
 });
 
+app.post('/api/jira/detect-story-points-field', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const result = await jira.detectStoryPointsField();
+    
+    // Log field detection
+    await historyLogger.logAction({
+      action: 'jira_field_detected',
+      userName: req.session.adminUsername || 'admin',
+      roomId: null,
+      details: { 
+        success: result.success,
+        fieldId: result.fieldId || null,
+        fieldName: result.fieldName || null,
+        error: result.error || null
+      },
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Jira detect story points field error:', error);
+    res.status(500).json({ error: 'Failed to detect story points field' });
+  }
+});
+
 app.post('/api/jira/search', adminAuth.requireAdmin, async (req, res) => {
   try {
     const { jql, maxResults = 50 } = req.body;

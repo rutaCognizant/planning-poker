@@ -246,6 +246,7 @@
                 <div class="filter-row" style="margin-bottom: 15px;">
                     <button id="save-jira-config" class="btn btn-primary">💾 Save Configuration</button>
                     <button id="fetch-jira-projects" class="btn btn-secondary" style="display: none;">📂 Fetch Projects</button>
+                    <button id="detect-story-points-field" class="btn btn-secondary" style="display: none;">🔍 Detect Story Points Field</button>
                     <span style="color: #64748b; font-size: 0.9em; margin-left: 15px;">
                         <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">Create API Token</a>
                     </span>
@@ -566,6 +567,7 @@
         const saveJiraConfigBtn = document.getElementById('save-jira-config');
         const testJiraConnectionBtn = document.getElementById('test-jira-connection');
         const fetchJiraProjectsBtn = document.getElementById('fetch-jira-projects');
+        const detectStoryPointsFieldBtn = document.getElementById('detect-story-points-field');
         const jiraStatusText = document.getElementById('jira-status-text');
         const jiraProjectsSection = document.getElementById('jira-projects-section');
         const jiraProjectsList = document.getElementById('jira-projects-list');
@@ -591,16 +593,19 @@
                 jiraStatusText.style.color = '#059669';
                 testJiraConnectionBtn.style.display = 'inline-block';
                 fetchJiraProjectsBtn.style.display = 'inline-block';
+                detectStoryPointsFieldBtn.style.display = 'inline-block';
             } else if (config.url && config.email) {
                 jiraStatusText.textContent = '⚠️ Configured (API Token needed)';
                 jiraStatusText.style.color = '#d97706';
                 testJiraConnectionBtn.style.display = 'none';
                 fetchJiraProjectsBtn.style.display = 'none';
+                detectStoryPointsFieldBtn.style.display = 'none';
             } else {
                 jiraStatusText.textContent = '❌ Not configured';
                 jiraStatusText.style.color = '#dc2626';
                 testJiraConnectionBtn.style.display = 'none';
                 fetchJiraProjectsBtn.style.display = 'none';
+                detectStoryPointsFieldBtn.style.display = 'none';
             }
         }
 
@@ -700,6 +705,31 @@
             }
         }
 
+        async function detectStoryPointsField() {
+            detectStoryPointsFieldBtn.disabled = true;
+            detectStoryPointsFieldBtn.textContent = '🔄 Detecting...';
+
+            try {
+                const response = await fetch('/api/jira/detect-story-points-field', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`✅ Found Story Points field: ${result.fieldName} (${result.fieldId})`, 'success');
+                } else {
+                    showNotification(`❌ Story Points field not found: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Detect story points field error:', error);
+                showNotification('Failed to detect Story Points field', 'error');
+            } finally {
+                detectStoryPointsFieldBtn.disabled = false;
+                detectStoryPointsFieldBtn.textContent = '🔍 Detect Story Points Field';
+            }
+        }
+
         // Jira Event Listeners
         showTokenBtn.addEventListener('click', () => {
             const input = jiraApiToken;
@@ -715,6 +745,7 @@
         saveJiraConfigBtn.addEventListener('click', saveJiraConfig);
         testJiraConnectionBtn.addEventListener('click', testJiraConnection);
         fetchJiraProjectsBtn.addEventListener('click', fetchJiraProjects);
+        detectStoryPointsFieldBtn.addEventListener('click', detectStoryPointsField);
 
         // Load Jira config on page load
         if (isLoggedIn) {
