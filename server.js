@@ -103,7 +103,7 @@ app.get('/api/admin/actions', adminAuth.requireAdmin, async (req, res) => {
 const rooms = new Map();
 
 // RzzRzz poker card values (Fibonacci sequence)
-const cardValues = ['0', '1', '2', '3', '5', '8', '13', '21', '34', '55', '89', '?', '☕'];
+const cardValues = ['0', '½', '1', '2', '3', '5', '8', '13', '21', '34', '55', '89', '?', '☕'];
 
 class Room {
   constructor(id, name) {
