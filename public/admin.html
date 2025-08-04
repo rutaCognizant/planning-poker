@@ -219,6 +219,46 @@
                 </div>
             </div>
 
+            <!-- Jira Integration Configuration -->
+            <div class="filters">
+                <h3>🔗 Jira Integration</h3>
+                <div id="jira-status" class="filter-row" style="margin-bottom: 15px;">
+                    <span id="jira-status-text" style="color: #64748b;">Not configured</span>
+                    <button id="test-jira-connection" class="btn btn-secondary" style="display: none;">🔍 Test Connection</button>
+                </div>
+                
+                <div class="filter-row" style="margin-bottom: 15px;">
+                    <label>Jira URL:</label>
+                    <input type="url" id="jira-url" placeholder="https://yourcompany.atlassian.net" class="form-control" style="flex: 1;">
+                </div>
+                
+                <div class="filter-row" style="margin-bottom: 15px;">
+                    <label>Email:</label>
+                    <input type="email" id="jira-email" placeholder="your.email@company.com" class="form-control" style="flex: 1;">
+                </div>
+                
+                <div class="filter-row" style="margin-bottom: 15px;">
+                    <label>API Token:</label>
+                    <input type="password" id="jira-api-token" placeholder="Your Jira API Token" class="form-control" style="flex: 1;">
+                    <button id="show-token" class="btn btn-secondary" style="padding: 8px 12px;">👁️</button>
+                </div>
+                
+                <div class="filter-row" style="margin-bottom: 15px;">
+                    <button id="save-jira-config" class="btn btn-primary">💾 Save Configuration</button>
+                    <button id="fetch-jira-projects" class="btn btn-secondary" style="display: none;">📂 Fetch Projects</button>
+                    <span style="color: #64748b; font-size: 0.9em; margin-left: 15px;">
+                        <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">Create API Token</a>
+                    </span>
+                </div>
+                
+                <div id="jira-projects-section" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                    <h4>Available Projects:</h4>
+                    <div id="jira-projects-list" style="max-height: 200px; overflow-y: auto; background: #f8fafc; padding: 10px; border-radius: 6px;">
+                        Loading projects...
+                    </div>
+                </div>
+            </div>
+
             <!-- Filters -->
             <div class="filters">
                 <h3>🔍 Filter Actions</h3>
@@ -239,6 +279,9 @@
                         <option value="story_set">Story Set</option>
                         <option value="admin_login_attempt">Admin Login</option>
                         <option value="database_downloaded">Database Downloaded</option>
+                        <option value="jira_config_updated">Jira Config Updated</option>
+                        <option value="jira_connection_tested">Jira Connection Tested</option>
+                        <option value="jira_story_points_updated">Jira Story Points Updated</option>
                     </select>
                     
                     <button id="apply-filters" class="btn btn-primary">Apply</button>
@@ -478,6 +521,7 @@
         function loadDashboardData() {
             loadStats();
             loadActions();
+            loadJiraConfig();
         }
 
         // Event listeners
@@ -513,6 +557,169 @@
         });
 
         downloadDbBtn.addEventListener('click', downloadDatabase);
+
+        // Jira Integration Elements
+        const jiraUrl = document.getElementById('jira-url');
+        const jiraEmail = document.getElementById('jira-email');
+        const jiraApiToken = document.getElementById('jira-api-token');
+        const showTokenBtn = document.getElementById('show-token');
+        const saveJiraConfigBtn = document.getElementById('save-jira-config');
+        const testJiraConnectionBtn = document.getElementById('test-jira-connection');
+        const fetchJiraProjectsBtn = document.getElementById('fetch-jira-projects');
+        const jiraStatusText = document.getElementById('jira-status-text');
+        const jiraProjectsSection = document.getElementById('jira-projects-section');
+        const jiraProjectsList = document.getElementById('jira-projects-list');
+
+        // Jira functions
+        async function loadJiraConfig() {
+            try {
+                const response = await fetch('/api/jira/config');
+                const config = await response.json();
+                
+                if (config.url) jiraUrl.value = config.url;
+                if (config.email) jiraEmail.value = config.email;
+                
+                updateJiraStatus(config);
+            } catch (error) {
+                console.error('Failed to load Jira config:', error);
+            }
+        }
+
+        function updateJiraStatus(config) {
+            if (config.enabled && config.hasApiToken) {
+                jiraStatusText.textContent = '✅ Connected to ' + (config.url || 'Jira');
+                jiraStatusText.style.color = '#059669';
+                testJiraConnectionBtn.style.display = 'inline-block';
+                fetchJiraProjectsBtn.style.display = 'inline-block';
+            } else if (config.url && config.email) {
+                jiraStatusText.textContent = '⚠️ Configured (API Token needed)';
+                jiraStatusText.style.color = '#d97706';
+                testJiraConnectionBtn.style.display = 'none';
+                fetchJiraProjectsBtn.style.display = 'none';
+            } else {
+                jiraStatusText.textContent = '❌ Not configured';
+                jiraStatusText.style.color = '#dc2626';
+                testJiraConnectionBtn.style.display = 'none';
+                fetchJiraProjectsBtn.style.display = 'none';
+            }
+        }
+
+        async function saveJiraConfig() {
+            const url = jiraUrl.value.trim();
+            const email = jiraEmail.value.trim();
+            const apiToken = jiraApiToken.value.trim();
+
+            if (!url || !email) {
+                showNotification('Jira URL and email are required', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/jira/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url,
+                        email,
+                        apiToken
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Jira configuration saved successfully', 'success');
+                    updateJiraStatus(result.config);
+                    jiraApiToken.value = ''; // Clear the token field for security
+                } else {
+                    showNotification(result.error || 'Failed to save configuration', 'error');
+                }
+            } catch (error) {
+                console.error('Save Jira config error:', error);
+                showNotification('Failed to save Jira configuration', 'error');
+            }
+        }
+
+        async function testJiraConnection() {
+            testJiraConnectionBtn.disabled = true;
+            testJiraConnectionBtn.textContent = '🔄 Testing...';
+
+            try {
+                const response = await fetch('/api/jira/test-connection', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`✅ Connected successfully as ${result.user}`, 'success');
+                } else {
+                    showNotification(`❌ Connection failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Test Jira connection error:', error);
+                showNotification('Failed to test Jira connection', 'error');
+            } finally {
+                testJiraConnectionBtn.disabled = false;
+                testJiraConnectionBtn.textContent = '🔍 Test Connection';
+            }
+        }
+
+        async function fetchJiraProjects() {
+            fetchJiraProjectsBtn.disabled = true;
+            fetchJiraProjectsBtn.textContent = '🔄 Loading...';
+            jiraProjectsList.innerHTML = 'Loading projects...';
+            jiraProjectsSection.style.display = 'block';
+
+            try {
+                const response = await fetch('/api/jira/projects');
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.projects.length === 0) {
+                        jiraProjectsList.innerHTML = '<p style="color: #64748b;">No projects found</p>';
+                    } else {
+                        jiraProjectsList.innerHTML = result.projects.map(project => 
+                            `<div style="padding: 8px; border-bottom: 1px solid #e2e8f0;">
+                                <strong>${project.key}</strong> - ${project.name}
+                                <span style="color: #64748b; font-size: 0.9em;">(${project.projectTypeKey})</span>
+                            </div>`
+                        ).join('');
+                    }
+                } else {
+                    jiraProjectsList.innerHTML = `<p style="color: #dc2626;">Error: ${result.error}</p>`;
+                }
+            } catch (error) {
+                console.error('Fetch Jira projects error:', error);
+                jiraProjectsList.innerHTML = '<p style="color: #dc2626;">Failed to fetch projects</p>';
+            } finally {
+                fetchJiraProjectsBtn.disabled = false;
+                fetchJiraProjectsBtn.textContent = '📂 Fetch Projects';
+            }
+        }
+
+        // Jira Event Listeners
+        showTokenBtn.addEventListener('click', () => {
+            const input = jiraApiToken;
+            if (input.type === 'password') {
+                input.type = 'text';
+                showTokenBtn.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                showTokenBtn.textContent = '👁️';
+            }
+        });
+
+        saveJiraConfigBtn.addEventListener('click', saveJiraConfig);
+        testJiraConnectionBtn.addEventListener('click', testJiraConnection);
+        fetchJiraProjectsBtn.addEventListener('click', fetchJiraProjects);
+
+        // Load Jira config on page load
+        if (isLoggedIn) {
+            loadJiraConfig();
+        }
 
         // Auto-refresh actions every 30 seconds
         setInterval(() => {

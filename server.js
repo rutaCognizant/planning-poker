@@ -5,9 +5,10 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const session = require('express-session');
 
-// Import admin and history modules
+// Import admin, history, and jira modules
 const historyLogger = require('./history');
 const adminAuth = require('./admin');
+const jira = require('./jira');
 
 const app = express();
 const server = http.createServer(app);
@@ -150,6 +151,130 @@ app.get('/api/admin/download-database', adminAuth.requireAdmin, async (req, res)
   } catch (error) {
     console.error('Database download error:', error);
     res.status(500).json({ error: 'Failed to download database' });
+  }
+});
+
+// Jira Integration API Routes
+app.get('/api/jira/config', adminAuth.requireAdmin, (req, res) => {
+  res.json(jira.getConfig());
+});
+
+app.post('/api/jira/config', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const { url, email, apiToken, projects } = req.body;
+    
+    if (!url || !email) {
+      return res.status(400).json({ error: 'Jira URL and email are required' });
+    }
+    
+    // Set configuration
+    jira.configure({ url, email, projects: projects || [], enabled: !!apiToken });
+    
+    if (apiToken) {
+      jira.setApiToken(apiToken);
+    }
+    
+    // Log configuration update
+    await historyLogger.logAction({
+      action: 'jira_config_updated',
+      userName: req.session.adminUsername || 'admin',
+      roomId: null,
+      details: { 
+        jiraUrl: url,
+        jiraEmail: email,
+        projectCount: (projects || []).length
+      },
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+    
+    res.json({ success: true, config: jira.getConfig() });
+  } catch (error) {
+    console.error('Jira config error:', error);
+    res.status(500).json({ error: 'Failed to update Jira configuration' });
+  }
+});
+
+app.post('/api/jira/test-connection', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const result = await jira.testConnection();
+    
+    // Log connection test
+    await historyLogger.logAction({
+      action: 'jira_connection_tested',
+      userName: req.session.adminUsername || 'admin',
+      roomId: null,
+      details: { 
+        success: result.success,
+        error: result.error || null
+      },
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Jira connection test error:', error);
+    res.status(500).json({ error: 'Failed to test Jira connection' });
+  }
+});
+
+app.get('/api/jira/projects', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const result = await jira.getProjects();
+    res.json(result);
+  } catch (error) {
+    console.error('Jira projects error:', error);
+    res.status(500).json({ error: 'Failed to fetch Jira projects' });
+  }
+});
+
+app.post('/api/jira/search', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const { jql, maxResults = 50 } = req.body;
+    
+    if (!jql) {
+      return res.status(400).json({ error: 'JQL query is required' });
+    }
+    
+    const result = await jira.searchIssues(jql, undefined, maxResults);
+    res.json(result);
+  } catch (error) {
+    console.error('Jira search error:', error);
+    res.status(500).json({ error: 'Failed to search Jira issues' });
+  }
+});
+
+app.post('/api/jira/update-story-points', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const { issueKey, storyPoints, comment } = req.body;
+    
+    if (!issueKey || storyPoints === undefined) {
+      return res.status(400).json({ error: 'Issue key and story points are required' });
+    }
+    
+    const result = await jira.updateIssueStoryPoints(issueKey, storyPoints, comment);
+    
+    if (result.success) {
+      // Log story points update
+      await historyLogger.logAction({
+        action: 'jira_story_points_updated',
+        userName: req.session.adminUsername || 'admin',
+        roomId: null,
+        details: { 
+          issueKey,
+          storyPoints,
+          comment: comment || null
+        },
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Jira update story points error:', error);
+    res.status(500).json({ error: 'Failed to update story points in Jira' });
   }
 });
 
