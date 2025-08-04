@@ -22,8 +22,6 @@ const revealBtn = document.getElementById('reveal-btn');
 const clearBtn = document.getElementById('clear-btn');
 const myVote = document.getElementById('my-vote');
 const myVoteValue = document.getElementById('my-vote-value');
-const voteAverage = document.getElementById('vote-average');
-const voteAverageValue = document.getElementById('vote-average-value');
 const votingResults = document.getElementById('voting-results');
 const resultsGrid = document.getElementById('results-grid');
 const votingStats = document.getElementById('voting-stats');
@@ -237,8 +235,6 @@ socket.on('room-joined', (data) => {
     
     if (data.room.votingRevealed) {
         showVotingResults(data.room);
-        // If votes are already revealed when joining, get stats from server
-        // This will be handled by a separate stats request or included in room data
     }
     
     showNotification('Joined room successfully!', 'success');
@@ -263,7 +259,6 @@ socket.on('story-updated', (data) => {
     currentStory.textContent = data.story;
     hasVoted = false;
     myVote.style.display = 'none';
-    voteAverage.style.display = 'none'; // Hide average when new story is set
     votingResults.style.display = 'none';
     revealBtn.style.display = 'inline-block';
     clearBtn.style.display = 'none';
@@ -288,13 +283,6 @@ socket.on('votes-revealed', (data) => {
     currentRoom = data.room;
     updateParticipants(data.room);
     showVotingResults(data.room, data.stats);
-    
-    // Show average next to "Your vote" if stats are available
-    if (data.stats && data.stats.average !== undefined) {
-        voteAverageValue.textContent = data.stats.average;
-        voteAverage.style.display = 'inline';
-    }
-    
     showNotification('Votes revealed!', 'success');
 });
 
@@ -302,7 +290,6 @@ socket.on('votes-cleared', (data) => {
     currentRoom = data.room;
     hasVoted = false;
     myVote.style.display = 'none';
-    voteAverage.style.display = 'none'; // Hide average when votes are cleared
     votingResults.style.display = 'none';
     revealBtn.style.display = 'inline-block';
     clearBtn.style.display = 'none';
