@@ -421,7 +421,7 @@ const PORT = process.env.PORT || 3000;
 // Initialize database connection and start server
 async function startServer() {
   try {
-    // Connect to MongoDB for history logging
+    // Connect to SQLite for history logging
     await historyLogger.connect();
     
     // Start the server
@@ -430,6 +430,7 @@ async function startServer() {
       console.log(`🌐 Visit http://localhost:${PORT} to start RzzRzz poker sessions`);
       console.log(`🔧 Admin dashboard: http://localhost:${PORT}/admin.html`);
       console.log(`📊 Default admin credentials: username=admin, password=rzzrzz123`);
+      console.log(`🗄️  SQLite database: rzzrzz-poker.db`);
       console.log(`⚠️  Remember to change admin password in production!`);
     });
 

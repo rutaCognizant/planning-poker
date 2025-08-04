@@ -49,6 +49,11 @@ jspm_packages/
 # dotenv environment variables file
 .env
 
+# SQLite database files
+*.db
+*.sqlite
+*.sqlite3
+
 # IDE files
 .vscode/
 .idea/
