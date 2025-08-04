@@ -132,20 +132,20 @@ function showVotingResults(room, stats) {
         votingStats.innerHTML = `
             <div class="stats-grid">
                 <div class="stat-item">
-                    <span class="stat-label">Average:</span>
                     <span class="stat-value">${stats.average}</span>
+                    <span class="stat-label">Average</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">Median:</span>
                     <span class="stat-value">${stats.median}</span>
+                    <span class="stat-label">Median</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">Min:</span>
                     <span class="stat-value">${stats.min}</span>
+                    <span class="stat-label">Min</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">Max:</span>
                     <span class="stat-value">${stats.max}</span>
+                    <span class="stat-label">Max</span>
                 </div>
             </div>
         `;

@@ -335,15 +335,19 @@ body {
 }
 
 .voting-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 15px;
     background: #f7fafc;
     padding: 20px;
     border-radius: 8px;
+    margin-top: 20px;
 }
 
-.stat {
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+}
+
+.stat-item {
     text-align: center;
 }
 
