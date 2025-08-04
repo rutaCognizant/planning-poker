@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RzzRzz Poker - Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .admin-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .login-form {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #667eea;
+            display: block;
+        }
+        
+        .stat-label {
+            color: #64748b;
+            margin-top: 5px;
+        }
+        
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .actions-table {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background: #f8fafc;
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 600;
+        }
+        
+        .actions-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .action-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            display: grid;
+            grid-template-columns: 150px 120px 150px 1fr 120px;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .action-item:hover {
+            background: #f8fafc;
+        }
+        
+        .action-time {
+            font-size: 0.9em;
+            color: #64748b;
+        }
+        
+        .action-type {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        
+        .action-create { background: #dcfce7; color: #166534; }
+        .action-join { background: #dbeafe; color: #1e40af; }
+        .action-vote { background: #fef3c7; color: #92400e; }
+        .action-reveal { background: #fce7f3; color: #be185d; }
+        .action-admin { background: #f3e8ff; color: #7c3aed; }
+        
+        .action-user {
+            font-weight: 500;
+        }
+        
+        .action-details {
+            font-size: 0.9em;
+            color: #64748b;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Login Form -->
+        <div id="login-section" class="login-form">
+            <div class="admin-header" style="margin: -40px -40px 30px -40px;">
+                <h2>🔐 Admin Login</h2>
+                <p>RzzRzz Poker Administration</p>
+            </div>
+            
+            <form id="admin-login-form">
+                <div class="form-group">
+                    <input type="text" id="admin-username" placeholder="Username" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="admin-password" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn btn-primary full-width">Login</button>
+            </form>
+            
+            <div id="login-error" class="error-message hidden"></div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="dashboard-section" class="hidden">
+            <div class="admin-header">
+                <button id="logout-btn" class="btn logout-btn">Logout</button>
+                <h1>📊 RzzRzz Poker Admin Dashboard</h1>
+                <p>Monitor user activity and system statistics</p>
+            </div>
+
+            <!-- Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span id="today-actions" class="stat-number">-</span>
+                    <div class="stat-label">Today's Actions</div>
+                </div>
+                <div class="stat-card">
+                    <span id="total-actions" class="stat-number">-</span>
+                    <div class="stat-label">Total Actions</div>
+                </div>
+                <div class="stat-card">
+                    <span id="unique-users" class="stat-number">-</span>
+                    <div class="stat-label">Unique Users</div>
+                </div>
+                <div class="stat-card">
+                    <span id="active-rooms" class="stat-number">-</span>
+                    <div class="stat-label">Active Rooms</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters">
+                <h3>🔍 Filter Actions</h3>
+                <div class="filter-row">
+                    <label>Date:</label>
+                    <input type="date" id="filter-date" class="form-control">
+                    
+                    <label>User:</label>
+                    <input type="text" id="filter-user" placeholder="Username" class="form-control">
+                    
+                    <label>Action:</label>
+                    <select id="filter-action" class="form-control">
+                        <option value="">All Actions</option>
+                        <option value="room_created">Room Created</option>
+                        <option value="room_joined">Room Joined</option>
+                        <option value="vote_cast">Vote Cast</option>
+                        <option value="votes_revealed">Votes Revealed</option>
+                        <option value="story_set">Story Set</option>
+                        <option value="admin_login_attempt">Admin Login</option>
+                    </select>
+                    
+                    <button id="apply-filters" class="btn btn-primary">Apply</button>
+                    <button id="clear-filters" class="btn btn-secondary">Clear</button>
+                </div>
+            </div>
+
+            <!-- Actions Table -->
+            <div class="actions-table">
+                <div class="table-header">
+                    <h3>📝 Recent Actions</h3>
+                </div>
+                
+                <div id="actions-loading" class="loading">
+                    Loading actions...
+                </div>
+                
+                <div id="actions-list" class="actions-list hidden">
+                    <!-- Actions will be populated here -->
+                </div>
+                
+                <div id="no-actions" class="no-data hidden">
+                    No actions found for the selected criteria.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        let isLoggedIn = false;
+        let currentFilters = {};
+
+        // DOM elements
+        const loginSection = document.getElementById('login-section');
+        const dashboardSection = document.getElementById('dashboard-section');
+        const loginForm = document.getElementById('admin-login-form');
+        const loginError = document.getElementById('login-error');
+        const logoutBtn = document.getElementById('logout-btn');
+        const notification = document.getElementById('notification');
+
+        // Stats elements
+        const todayActions = document.getElementById('today-actions');
+        const totalActions = document.getElementById('total-actions');
+        const uniqueUsers = document.getElementById('unique-users');
+        const activeRooms = document.getElementById('active-rooms');
+
+        // Filter elements
+        const filterDate = document.getElementById('filter-date');
+        const filterUser = document.getElementById('filter-user');
+        const filterAction = document.getElementById('filter-action');
+        const applyFiltersBtn = document.getElementById('apply-filters');
+        const clearFiltersBtn = document.getElementById('clear-filters');
+
+        // Actions elements
+        const actionsLoading = document.getElementById('actions-loading');
+        const actionsList = document.getElementById('actions-list');
+        const noActions = document.getElementById('no-actions');
+
+        // Utility functions
+        function showNotification(message, type = 'info') {
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function showError(message) {
+            loginError.textContent = message;
+            loginError.classList.remove('hidden');
+        }
+
+        function hideError() {
+            loginError.classList.add('hidden');
+        }
+
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        function getActionTypeClass(action) {
+            if (action.includes('create')) return 'action-create';
+            if (action.includes('join')) return 'action-join';
+            if (action.includes('vote')) return 'action-vote';
+            if (action.includes('reveal')) return 'action-reveal';
+            if (action.includes('admin')) return 'action-admin';
+            return '';
+        }
+
+        // API calls
+        async function adminLogin(username, password) {
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    isLoggedIn = true;
+                    showDashboard();
+                    loadDashboardData();
+                    showNotification('Welcome to admin dashboard!', 'success');
+                } else {
+                    showError(data.error || 'Login failed');
+                }
+            } catch (error) {
+                showError('Connection error. Please try again.');
+            }
+        }
+
+        async function adminLogout() {
+            try {
+                await fetch('/api/admin/logout', { method: 'POST' });
+                isLoggedIn = false;
+                showLogin();
+                showNotification('Logged out successfully', 'info');
+            } catch (error) {
+                showNotification('Logout error', 'error');
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/admin/stats');
+                const stats = await response.json();
+                
+                todayActions.textContent = stats.todayActions || 0;
+                totalActions.textContent = stats.totalActions || 0;
+                uniqueUsers.textContent = stats.uniqueUsersCount || 0;
+                activeRooms.textContent = '0'; // Will be updated with real-time data
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        async function loadActions(filters = {}) {
+            actionsLoading.classList.remove('hidden');
+            actionsList.classList.add('hidden');
+            noActions.classList.add('hidden');
+
+            try {
+                const params = new URLSearchParams(filters);
+                const response = await fetch(`/api/admin/actions?${params}`);
+                const actions = await response.json();
+
+                actionsLoading.classList.add('hidden');
+
+                if (actions.length === 0) {
+                    noActions.classList.remove('hidden');
+                    return;
+                }
+
+                actionsList.innerHTML = actions.map(action => `
+                    <div class="action-item">
+                        <div class="action-time">${formatDateTime(action.timestamp)}</div>
+                        <div class="action-type ${getActionTypeClass(action.action)}">${action.action.replace(/_/g, ' ')}</div>
+                        <div class="action-user">${action.userName || 'System'}</div>
+                        <div class="action-details">${action.details ? JSON.stringify(action.details) : action.roomId || '-'}</div>
+                        <div style="font-size: 0.8em; color: #64748b;">${action.ip || '-'}</div>
+                    </div>
+                `).join('');
+
+                actionsList.classList.remove('hidden');
+            } catch (error) {
+                actionsLoading.classList.add('hidden');
+                showNotification('Failed to load actions', 'error');
+            }
+        }
+
+        function showLogin() {
+            loginSection.classList.remove('hidden');
+            dashboardSection.classList.add('hidden');
+            hideError();
+        }
+
+        function showDashboard() {
+            loginSection.classList.add('hidden');
+            dashboardSection.classList.remove('hidden');
+        }
+
+        function loadDashboardData() {
+            loadStats();
+            loadActions();
+        }
+
+        // Event listeners
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('admin-username').value.trim();
+            const password = document.getElementById('admin-password').value;
+
+            if (username && password) {
+                adminLogin(username, password);
+            }
+        });
+
+        logoutBtn.addEventListener('click', adminLogout);
+
+        applyFiltersBtn.addEventListener('click', () => {
+            const filters = {};
+            
+            if (filterDate.value) filters.date = filterDate.value;
+            if (filterUser.value.trim()) filters.user = filterUser.value.trim();
+            if (filterAction.value) filters.action = filterAction.value;
+
+            currentFilters = filters;
+            loadActions(filters);
+        });
+
+        clearFiltersBtn.addEventListener('click', () => {
+            filterDate.value = '';
+            filterUser.value = '';
+            filterAction.value = '';
+            currentFilters = {};
+            loadActions();
+        });
+
+        // Auto-refresh actions every 30 seconds
+        setInterval(() => {
+            if (isLoggedIn) {
+                loadActions(currentFilters);
+                loadStats();
+            }
+        }, 30000);
+
+        // Set today's date as default
+        filterDate.value = new Date().toISOString().split('T')[0];
+    </script>
+</body>
+</html>
