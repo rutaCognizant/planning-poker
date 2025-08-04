@@ -14,7 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // In-memory storage for rooms and sessions
 const rooms = new Map();
 
-// Planning poker card values (Fibonacci sequence)
+// RzzRzz poker card values (Fibonacci sequence)
 const cardValues = ['0', '1', '2', '3', '5', '8', '13', '21', '34', '55', '89', '?', '☕'];
 
 class Room {
@@ -204,6 +204,6 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Planning Poker server running on port ${PORT}`);
-  console.log(`Visit http://localhost:${PORT} to start planning poker sessions`);
+  console.log(`RzzRzz Poker server running on port ${PORT}`);
+  console.log(`Visit http://localhost:${PORT} to start RzzRzz poker sessions`);
 }); 

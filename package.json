@@ -1,7 +1,7 @@
 {
-  "name": "HERB planning-poker",
+  "name": "RzzRzz-poker",
   "version": "1.0.0",
-  "description": "Online HERB Planning Poker application for agile estimation",
+  "description": "Online RzzRzz Poker application for agile estimation",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
