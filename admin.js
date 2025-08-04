@@ -7,7 +7,7 @@ class AdminAuth {
         this.adminCredentials = {
             username: process.env.ADMIN_USERNAME || 'admin',
             // Default password: 'rzzrzz123' - should be changed in production
-            passwordHash: process.env.ADMIN_PASSWORD_HASH || '$2a$10$8K1p/a0GxQvKr1nXhd7BZuq8rOHX/Xk2OPzJr9mYBc4fB5Y0c8B8m'
+            passwordHash: process.env.ADMIN_PASSWORD_HASH || '$2a$10$cM/ohnOckCG7c2sCXmTkTOyB6FH0CXbCCQH/TXvKZKvE6PpUUNMR2'
         };
     }
 
