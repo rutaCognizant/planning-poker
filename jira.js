@@ -146,9 +146,9 @@ class JiraIntegration {
             // Look for Story Points field by name
             const storyPointsField = fields.find(field => 
                 field.name.toLowerCase().includes('Story point estimate') ||
-                //field.name.toLowerCase().includes('story points') ||
-              //  field.name.toLowerCase().includes('story point') ||
-              //  field.name.toLowerCase() === 'points' ||
+                field.name.toLowerCase().includes('story points') ||
+                field.name.toLowerCase().includes('story point') ||
+                field.name.toLowerCase() === 'points' ||
                 field.id === 'customfield_10016' // fallback to common default
             );
             
@@ -240,6 +240,10 @@ class JiraIntegration {
             }
 
             console.log(`✅ Loaded ${allProjects.length} Jira projects total`);
+            
+            // Save projects to config for validation purposes
+            this.config.projects = allProjects;
+            this.saveConfig();
             
             return {
                 success: true,
@@ -681,25 +685,37 @@ class JiraIntegration {
 
     setSelectedProject(projectKey) {
         try {
-            // Validate project exists in our projects list
+            console.log(`🎯 Setting selected project: ${projectKey}`);
+            console.log(`📋 Available projects: ${this.config.projects.length}`);
+            
+            // Validate project exists in our projects list (only if projectKey is provided)
             if (projectKey && this.config.projects.length > 0) {
                 const project = this.config.projects.find(p => p.key === projectKey);
                 if (!project) {
+                    console.error(`❌ Project ${projectKey} not found in available projects`);
                     return {
                         success: false,
-                        error: 'Project not found in available projects'
+                        error: `Project '${projectKey}' not found in available projects. Please refresh projects first.`
                     };
                 }
+                console.log(`✅ Project ${projectKey} validated successfully`);
+            } else if (projectKey) {
+                console.warn(`⚠️ No projects loaded for validation, allowing project selection: ${projectKey}`);
+            } else {
+                console.log(`🗑️ Clearing selected project`);
             }
 
-            this.config.selectedProject = projectKey;
+            this.config.selectedProject = projectKey || null;
             this.saveConfig();
+            
+            console.log(`💾 Saved selected project: ${this.config.selectedProject}`);
             
             return {
                 success: true,
                 selectedProject: this.config.selectedProject
             };
         } catch (error) {
+            console.error(`❌ Error setting selected project:`, error);
             return {
                 success: false,
                 error: error.message

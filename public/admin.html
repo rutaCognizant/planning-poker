@@ -807,23 +807,28 @@
         // Selected Project Functions
         async function loadSelectedProject() {
             try {
+                console.log(`🔄 Admin: Loading selected project...`);
                 const response = await fetch('/api/jira/selected-project');
                 const result = await response.json();
+                console.log(`📡 Admin: Selected project response:`, result);
                 
                 if (result.success) {
                     if (result.selectedProject && result.projectInfo) {
+                        console.log(`✅ Admin: Project selected: ${result.projectInfo.key}`);
                         selectedProjectDisplay.innerHTML = `
                             <strong>${result.projectInfo.key}</strong> - ${result.projectInfo.name}
                             <span style="color: #059669; margin-left: 10px;">✅ Selected</span>
                         `;
                         selectedProjectDisplay.style.color = '#059669';
                     } else {
+                        console.log(`⚠️ Admin: No project selected`);
                         selectedProjectDisplay.innerHTML = `
                             <span style="color: #d97706;">⚠️ No project selected for room estimation</span>
                         `;
                         selectedProjectDisplay.style.color = '#d97706';
                     }
                 } else {
+                    console.error(`❌ Admin: Error loading selected project:`, result.error);
                     selectedProjectDisplay.innerHTML = `
                         <span style="color: #dc2626;">❌ Error loading selected project</span>
                     `;
@@ -854,6 +859,8 @@
         async function setRoomProject() {
             const projectKey = roomProjectSelector.value;
             
+            console.log(`🎯 Admin: Setting room project to: ${projectKey}`);
+            
             try {
                 setRoomProjectBtn.disabled = true;
                 setRoomProjectBtn.innerHTML = '<span class="loading-spinner"></span>Setting...';
@@ -867,6 +874,7 @@
                 });
                 
                 const result = await response.json();
+                console.log(`📡 Admin: API response:`, result);
                 
                 if (result.success) {
                     if (projectKey) {
@@ -874,8 +882,10 @@
                     } else {
                         showNotification('✅ Cleared room estimation project selection', 'success');
                     }
+                    console.log(`🔄 Admin: Refreshing selected project display...`);
                     await loadSelectedProject();
                 } else {
+                    console.error(`❌ Admin: Failed to set project:`, result.error);
                     showNotification(`❌ Failed to set project: ${result.error}`, 'error');
                 }
             } catch (error) {

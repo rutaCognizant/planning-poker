@@ -364,12 +364,15 @@ async function checkJiraConfiguration() {
 
 async function loadSelectedProject() {
     try {
+        console.log(`🔄 Room: Loading selected project...`);
         const response = await fetch('/api/jira/selected-project');
         const result = await response.json();
+        console.log(`📡 Room: Selected project response:`, result);
         
         if (result.success) {
             if (result.selectedProject && result.projectInfo) {
                 selectedProject = result.projectInfo;
+                console.log(`✅ Room: Project selected: ${result.projectInfo.key}`);
                 roomProjectInfo.innerHTML = `<strong>${result.projectInfo.key}</strong> - ${result.projectInfo.name}`;
                 roomProjectInfo.style.color = '#059669';
                 
@@ -377,12 +380,14 @@ async function loadSelectedProject() {
                 jiraSearchInput.placeholder = `Search in ${result.projectInfo.key} project or enter JQL...`;
             } else {
                 selectedProject = null;
+                console.log(`⚠️ Room: No project selected`);
                 roomProjectInfo.innerHTML = '<span style="color: #d97706;">⚠️ No project selected</span>';
                 roomProjectInfo.style.color = '#d97706';
                 jiraSearchInput.placeholder = 'Search stories or enter JQL...';
             }
         } else {
             selectedProject = null;
+            console.error(`❌ Room: Error loading project:`, result.error);
             roomProjectInfo.innerHTML = '<span style="color: #dc2626;">❌ Error loading project</span>';
             roomProjectInfo.style.color = '#dc2626';
         }
@@ -409,6 +414,7 @@ async function searchJiraStories(query = '', quickFilter = '') {
         
         // Build base JQL with project filter if selected project exists
         const projectFilter = selectedProject ? `project = "${selectedProject.key}"` : '';
+        console.log(`🔍 Room: Search with project filter: ${projectFilter || 'No filter'}`);
         
         if (quickFilter) {
             switch (quickFilter) {
@@ -449,6 +455,8 @@ async function searchJiraStories(query = '', quickFilter = '') {
                 jql += ' ORDER BY created DESC';
             }
         }
+        
+        console.log(`📝 Room: Final JQL query: ${jql}`);
         
         const response = await fetch('/api/jira/search-public', {
             method: 'POST',
