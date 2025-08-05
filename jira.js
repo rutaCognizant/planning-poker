@@ -145,11 +145,12 @@ class JiraIntegration {
             
             // Look for Story Points field by name
             const storyPointsField = fields.find(field => 
-                field.name.toLowerCase().includes('Story point estimate') ||
+                field.id === 'customfield_10015' || // your specific Jira instance field (priority)
+                field.name.toLowerCase().includes('story point estimate') ||
                 field.name.toLowerCase().includes('story points') ||
-                field.name.toLowerCase().includes('Story Point Estimate') ||
-               // field.name.toLowerCase() === 'points' ||
-                field.id === 'customfield_10015' // fallback to common default
+                field.name.toLowerCase().includes('story point') ||
+                field.name.toLowerCase() === 'points' ||
+                field.id === 'customfield_10016' // fallback to common default
             );
             
             if (storyPointsField) {
