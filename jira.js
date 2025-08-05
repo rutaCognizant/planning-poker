@@ -155,12 +155,12 @@ class JiraIntegration {
             
             // Look for Story Points field by name
             const storyPointsField = fields.find(field => 
-                field.id === 'customfield_10015' || // your specific Jira instance field (priority)
+                field.id === 'customfield_10016' || // your specific Jira instance field (priority)
                 field.name.toLowerCase().includes('story point estimate') ||
                 field.name.toLowerCase().includes('story points') ||
                 field.name.toLowerCase().includes('story point') ||
                 field.name.toLowerCase() === 'points' ||
-                field.id === 'customfield_10016' // fallback to common default
+                field.id === 'customfield_10015' // fallback to other common default
             );
             
             if (storyPointsField) {
@@ -351,6 +351,12 @@ class JiraIntegration {
 
     async updateIssueStoryPoints(issueKey, storyPoints, comment = null) {
         try {
+            // FORCE RELOAD CONFIG TO ENSURE LATEST FIELD ID
+            this.loadConfig();
+            
+            // FORCE CORRECT FIELD ID FOR YOUR JIRA INSTANCE
+            this.config.storyPointsField = 'customfield_10016';
+            
             // Auto-detect story points field if not already detected
             if (!this.config.storyPointsField) {
                 const detection = await this.detectStoryPointsField();
