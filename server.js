@@ -243,7 +243,7 @@ app.post('/api/jira/detect-story-points-field', adminAuth.requireAdmin, async (r
         success: result.success,
         fieldId: result.fieldId || null,
         fieldName: result.fieldName || null,
-        error: result.error || null
+        error: result.error || null 
       },
       ip: req.ip,
       userAgent: req.get('User-Agent')
@@ -253,6 +253,39 @@ app.post('/api/jira/detect-story-points-field', adminAuth.requireAdmin, async (r
   } catch (error) {
     console.error('Jira detect story points field error:', error);
     res.status(500).json({ error: 'Failed to detect story points field' });
+  }
+});
+
+app.post('/api/jira/detect-epic-name-field', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const { projectKey } = req.body;
+    
+    if (!projectKey) {
+      return res.status(400).json({ error: 'Project key is required' });
+    }
+    
+    const result = await jira.detectEpicNameField(projectKey);
+    
+    // Log field detection
+    await historyLogger.logAction({
+      action: 'jira_epic_field_detected',
+      userName: req.session.adminUsername || 'admin',
+      roomId: null,
+      details: { 
+        success: result.success,
+        fieldId: result.fieldId || null,
+        fieldName: result.fieldName || null,
+        projectKey: projectKey,
+        error: result.error || null 
+      },
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Jira detect epic name field error:', error);
+    res.status(500).json({ error: 'Failed to detect Epic Name field' });
   }
 });
 

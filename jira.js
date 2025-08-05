@@ -396,6 +396,15 @@ class JiraIntegration {
 
     async createEpic(projectKey, epicData) {
         try {
+            // Detect Epic Name field if not already cached
+            if (!this.config.epicNameField) {
+                const fieldDetection = await this.detectEpicNameField(projectKey);
+                if (fieldDetection.success) {
+                    this.config.epicNameField = fieldDetection.fieldId;
+                    this.saveConfig();
+                }
+            }
+
             const issueData = {
                 fields: {
                     project: { key: projectKey },
@@ -403,11 +412,14 @@ class JiraIntegration {
                     summary: epicData.summary,
                     description: this.formatDescription(epicData.description),
                     priority: epicData.priority ? { name: epicData.priority } : undefined,
-                    assignee: epicData.assignee ? { name: epicData.assignee } : undefined,
-                    // Epic Name (customfield_10011 is common, but may vary)
-                    customfield_10011: epicData.epicName || epicData.summary
+                    assignee: epicData.assignee ? { name: epicData.assignee } : undefined
                 }
             };
+
+            // Add Epic Name field if detected
+            if (this.config.epicNameField) {
+                issueData.fields[this.config.epicNameField] = epicData.epicName || epicData.summary;
+            }
 
             // Remove undefined fields
             Object.keys(issueData.fields).forEach(key => {
@@ -434,6 +446,40 @@ class JiraIntegration {
                 success: false,
                 error: error.message
             };
+        }
+    }
+
+    async detectEpicNameField(projectKey) {
+        try {
+            // Get field configurations for Epic issue type
+            const metadata = await this.makeJiraRequest(`/rest/api/3/issue/createmeta?projectKeys=${projectKey}&issuetypeNames=Epic&expand=projects.issuetypes.fields`);
+
+            if (metadata.projects && metadata.projects[0] && metadata.projects[0].issuetypes) {
+                const epicIssueType = metadata.projects[0].issuetypes.find(it => it.name === 'Epic');
+                
+                if (epicIssueType && epicIssueType.fields) {
+                    // Look for Epic Name field by name patterns
+                    for (const [fieldId, fieldInfo] of Object.entries(epicIssueType.fields)) {
+                        if (fieldInfo.name && (
+                            fieldInfo.name.toLowerCase().includes('epic name') ||
+                            fieldInfo.name.toLowerCase().includes('epic link') ||
+                            fieldInfo.name.toLowerCase() === 'epic' ||
+                            fieldId === 'customfield_10011' || // Common default
+                            fieldId === 'customfield_10004'    // Another common ID
+                        )) {
+                            return {
+                                success: true,
+                                fieldId: fieldId,
+                                fieldName: fieldInfo.name
+                            };
+                        }
+                    }
+                }
+            }
+
+            return { success: false, error: 'Epic Name field not found. Epic will be created without Epic Name field.' };
+        } catch (error) {
+            return { success: false, error: error.message };
         }
     }
 
@@ -512,8 +558,24 @@ class JiraIntegration {
 
     async getEpics(projectKey) {
         try {
+            // Detect Epic Name field if not already cached
+            if (!this.config.epicNameField) {
+                const fieldDetection = await this.detectEpicNameField(projectKey);
+                if (fieldDetection.success) {
+                    this.config.epicNameField = fieldDetection.fieldId;
+                    this.saveConfig();
+                }
+            }
+
             const jql = `project = "${projectKey}" AND issuetype = Epic ORDER BY created DESC`;
-            const result = await this.searchIssues(jql, ['summary', 'status', 'customfield_10011'], 50);
+            
+            // Include Epic Name field in search if detected
+            const fieldsToFetch = ['summary', 'status'];
+            if (this.config.epicNameField) {
+                fieldsToFetch.push(this.config.epicNameField);
+            }
+            
+            const result = await this.searchIssues(jql, fieldsToFetch, 50);
             
             if (result.success) {
                 return {
@@ -523,7 +585,9 @@ class JiraIntegration {
                         id: epic.id,
                         summary: epic.summary,
                         status: epic.status,
-                        epicName: epic.fields?.customfield_10011,
+                        epicName: this.config.epicNameField ? 
+                            epic.fields?.[this.config.epicNameField] || epic.summary : 
+                            epic.summary,
                         url: epic.url
                     }))
                 };

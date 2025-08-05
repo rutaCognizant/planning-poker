@@ -247,6 +247,7 @@
                     <button id="save-jira-config" class="btn btn-primary">💾 Save Configuration</button>
                     <button id="fetch-jira-projects" class="btn btn-secondary" style="display: none;">📂 Fetch Projects</button>
                     <button id="detect-story-points-field" class="btn btn-secondary" style="display: none;">🔍 Detect Story Points Field</button>
+                <button id="detect-epic-name-field" class="btn btn-secondary" style="display: none;">🏷️ Detect Epic Name Field</button>
                     <span style="color: #64748b; font-size: 0.9em; margin-left: 15px;">
                         <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">Create API Token</a>
                     </span>
@@ -697,6 +698,7 @@
         const testJiraConnectionBtn = document.getElementById('test-jira-connection');
         const fetchJiraProjectsBtn = document.getElementById('fetch-jira-projects');
         const detectStoryPointsFieldBtn = document.getElementById('detect-story-points-field');
+        const detectEpicNameFieldBtn = document.getElementById('detect-epic-name-field');
         const jiraStatusText = document.getElementById('jira-status-text');
         const jiraProjectsSection = document.getElementById('jira-projects-section');
         const jiraProjectsList = document.getElementById('jira-projects-list');
@@ -747,18 +749,21 @@
                 testJiraConnectionBtn.style.display = 'inline-block';
                 fetchJiraProjectsBtn.style.display = 'inline-block';
                 detectStoryPointsFieldBtn.style.display = 'inline-block';
+                detectEpicNameFieldBtn.style.display = 'inline-block';
             } else if (config.url && config.email) {
                 jiraStatusText.textContent = '⚠️ Configured (API Token needed)';
                 jiraStatusText.style.color = '#d97706';
                 testJiraConnectionBtn.style.display = 'none';
                 fetchJiraProjectsBtn.style.display = 'none';
                 detectStoryPointsFieldBtn.style.display = 'none';
+                detectEpicNameFieldBtn.style.display = 'none';
             } else {
                 jiraStatusText.textContent = '❌ Not configured';
                 jiraStatusText.style.color = '#dc2626';
                 testJiraConnectionBtn.style.display = 'none';
                 fetchJiraProjectsBtn.style.display = 'none';
                 detectStoryPointsFieldBtn.style.display = 'none';
+                detectEpicNameFieldBtn.style.display = 'none';
             }
         }
 
@@ -894,6 +899,44 @@
             } finally {
                 detectStoryPointsFieldBtn.disabled = false;
                 detectStoryPointsFieldBtn.textContent = '🔍 Detect Story Points Field';
+            }
+        }
+
+        async function detectEpicNameField() {
+            detectEpicNameFieldBtn.disabled = true;
+            detectEpicNameFieldBtn.textContent = '🔄 Detecting...';
+
+            try {
+                // Get a project key for field detection
+                const projectsResponse = await fetch('/api/jira/projects');
+                const projectsResult = await projectsResponse.json();
+                
+                if (!projectsResult.success || !projectsResult.projects || projectsResult.projects.length === 0) {
+                    showNotification('❌ No projects found. Please ensure Jira is configured.', 'error');
+                    return;
+                }
+                
+                const projectKey = projectsResult.projects[0].key;
+                
+                const response = await fetch('/api/jira/detect-epic-name-field', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectKey })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`✅ Epic Name field detected: ${result.fieldName} (${result.fieldId})`, 'success');
+                } else {
+                    showNotification(`⚠️ Epic Name field detection: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Detect Epic Name field error:', error);
+                showNotification('❌ Failed to detect Epic Name field', 'error');
+            } finally {
+                detectEpicNameFieldBtn.disabled = false;
+                detectEpicNameFieldBtn.textContent = '🏷️ Detect Epic Name Field';
             }
         }
 
@@ -1185,6 +1228,7 @@
         testJiraConnectionBtn.addEventListener('click', testJiraConnection);
         fetchJiraProjectsBtn.addEventListener('click', fetchJiraProjects);
         detectStoryPointsFieldBtn.addEventListener('click', detectStoryPointsField);
+        detectEpicNameFieldBtn.addEventListener('click', detectEpicNameField);
 
         // Backlog Management Event Listeners
         backlogProject.addEventListener('change', (e) => {
