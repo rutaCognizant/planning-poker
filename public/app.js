@@ -486,43 +486,144 @@ async function saveEstimateToJira(storyKey, storyPoints, roomId) {
         return;
     }
     
-    try {
-        const comment = `Story estimated in RzzRzz Poker session (Room: ${roomId})\nTeam consensus: ${storyPoints} story points`;
-        
-        const response = await fetch('/api/jira/update-story-points-public', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                issueKey: storyKey,
-                storyPoints: parseInt(storyPoints),
-                comment: comment
-            })
+    // Show editable story points modal
+    showEditStoryPointsModal(storyKey, storyPoints, roomId);
+}
+
+function showEditStoryPointsModal(storyKey, storyPoints, roomId) {
+    // Create modal elements
+    const modal = document.createElement('div');
+    modal.className = 'jira-save-modal';
+    modal.innerHTML = `
+        <div class="jira-save-modal-content">
+            <div class="jira-save-modal-header">
+                <h3>💾 Save to Jira</h3>
+                <button class="jira-save-modal-close">&times;</button>
+            </div>
+            <div class="jira-save-modal-body">
+                <p><strong>Story:</strong> ${storyKey}</p>
+                <div class="story-points-input-group">
+                    <label for="jira-story-points">Story Points:</label>
+                    <input type="number" id="jira-story-points" value="${storyPoints}" min="0" max="100" step="0.5">
+                    <div class="fibonacci-buttons">
+                        <button class="fib-btn" data-value="1">1</button>
+                        <button class="fib-btn" data-value="2">2</button>
+                        <button class="fib-btn" data-value="3">3</button>
+                        <button class="fib-btn" data-value="5">5</button>
+                        <button class="fib-btn" data-value="8">8</button>
+                        <button class="fib-btn" data-value="13">13</button>
+                        <button class="fib-btn" data-value="21">21</button>
+                    </div>
+                </div>
+                <div class="comment-input-group">
+                    <label for="jira-comment">Comment (optional):</label>
+                    <textarea id="jira-comment" placeholder="Add a comment about this estimation..." rows="3">Story estimated in RzzRzz Poker session (Room: ${roomId})
+Team consensus: ${storyPoints} story points</textarea>
+                </div>
+            </div>
+            <div class="jira-save-modal-footer">
+                <button class="btn btn-secondary jira-save-cancel">Cancel</button>
+                <button class="btn btn-primary jira-save-confirm">💾 Save to Jira</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Add event listeners
+    const storyPointsInput = modal.querySelector('#jira-story-points');
+    const commentInput = modal.querySelector('#jira-comment');
+    const fibButtons = modal.querySelectorAll('.fib-btn');
+    const closeBtn = modal.querySelector('.jira-save-modal-close');
+    const cancelBtn = modal.querySelector('.jira-save-cancel');
+    const confirmBtn = modal.querySelector('.jira-save-confirm');
+
+    // Fibonacci button handlers
+    fibButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            storyPointsInput.value = btn.dataset.value;
+            // Highlight selected button
+            fibButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
         });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification(`✅ Saved ${storyPoints} points to ${storyKey} in Jira`, 'success');
-            
-            // Add a "Save to Jira" button to the voting results
-            const saveToJiraBtn = document.createElement('button');
-            saveToJiraBtn.className = 'jira-save-btn';
-            saveToJiraBtn.textContent = '✅ Saved to Jira';
-            saveToJiraBtn.disabled = true;
-            saveToJiraBtn.style.marginTop = '10px';
-            
-            if (!votingStats.querySelector('.jira-save-btn')) {
-                votingStats.appendChild(saveToJiraBtn);
-            }
-        } else {
-            showNotification(`❌ Failed to save to Jira: ${result.error}`, 'error');
+    });
+
+    // Highlight current value if it matches a fibonacci number
+    const currentValue = storyPoints.toString();
+    fibButtons.forEach(btn => {
+        if (btn.dataset.value === currentValue) {
+            btn.classList.add('active');
         }
-    } catch (error) {
-        console.error('Save to Jira error:', error);
-        showNotification('❌ Failed to save estimate to Jira', 'error');
-    }
+    });
+
+    // Close modal handlers
+    const closeModal = () => {
+        document.body.removeChild(modal);
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    // Save handler
+    confirmBtn.addEventListener('click', async () => {
+        const finalStoryPoints = parseFloat(storyPointsInput.value);
+        const comment = commentInput.value.trim();
+
+        if (isNaN(finalStoryPoints) || finalStoryPoints < 0) {
+            showNotification('Please enter a valid story points value', 'error');
+            return;
+        }
+
+        confirmBtn.innerHTML = '<span class="loading-spinner"></span>Saving...';
+        confirmBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/jira/update-story-points-public', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    issueKey: storyKey,
+                    storyPoints: parseInt(finalStoryPoints),
+                    comment: comment || `Story estimated in RzzRzz Poker session (Room: ${roomId})\nTeam consensus: ${finalStoryPoints} story points`
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification(`✅ Saved ${finalStoryPoints} points to ${storyKey} in Jira`, 'success');
+                
+                // Add/update the save button in voting results
+                const saveToJiraBtn = document.createElement('button');
+                saveToJiraBtn.className = 'jira-save-btn';
+                saveToJiraBtn.textContent = `✅ Saved ${finalStoryPoints} to ${storyKey}`;
+                saveToJiraBtn.disabled = true;
+                saveToJiraBtn.style.marginTop = '10px';
+                
+                if (!votingStats.querySelector('.jira-save-btn')) {
+                    votingStats.appendChild(saveToJiraBtn);
+                }
+                
+                closeModal();
+            } else {
+                showNotification(`❌ Failed to save to Jira: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            console.error('Save to Jira error:', error);
+            showNotification('❌ Failed to save estimate to Jira', 'error');
+        } finally {
+            confirmBtn.innerHTML = '💾 Save to Jira';
+            confirmBtn.disabled = false;
+        }
+    });
+
+    // Focus on story points input
+    setTimeout(() => storyPointsInput.focus(), 100);
 }
 
 // Jira Event Listeners
