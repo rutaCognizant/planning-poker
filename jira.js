@@ -203,15 +203,42 @@ class JiraIntegration {
 
     async getProjects() {
         try {
-            const projects = await this.makeJiraRequest('/rest/api/3/project/search?maxResults=100');
-            return {
-                success: true,
-                projects: projects.values.map(p => ({
+            let allProjects = [];
+            let startAt = 0;
+            const maxResults = 100; // Jira's max per request
+            let hasMoreResults = true;
+
+            // Paginate through ALL projects
+            while (hasMoreResults) {
+                const response = await this.makeJiraRequest(
+                    `/rest/api/3/project/search?maxResults=${maxResults}&startAt=${startAt}`
+                );
+                
+                const projects = response.values.map(p => ({
                     key: p.key,
                     name: p.name,
                     id: p.id,
                     projectTypeKey: p.projectTypeKey
-                }))
+                }));
+                
+                allProjects = allProjects.concat(projects);
+                
+                // Check if there are more results
+                hasMoreResults = response.values.length === maxResults;
+                startAt += maxResults;
+                
+                // Safety check to prevent infinite loops
+                if (allProjects.length > 10000) {
+                    console.warn('⚠️ Loaded 10,000+ projects, stopping pagination for safety');
+                    break;
+                }
+            }
+
+            console.log(`✅ Loaded ${allProjects.length} Jira projects total`);
+            
+            return {
+                success: true,
+                projects: allProjects
             };
         } catch (error) {
             return {

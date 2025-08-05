@@ -1,6 +1,6 @@
 {
   "name": "RzzRzz-poker",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Online RzzRzz Poker application for agile estimation",
   "main": "server.js",
   "scripts": {

@@ -1231,4 +1231,65 @@ body {
     .fibonacci-buttons {
         justify-content: center;
     }
+}
+
+/* Project Search Styles */
+.project-search-container {
+    position: relative;
+}
+
+.project-search-input {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.project-search-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: white;
+}
+
+.project-search-input::placeholder {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.project-count {
+    font-size: 0.8em;
+    color: #64748b;
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+/* Enhanced project dropdown */
+#backlog-project {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Responsive adjustments for project search */
+@media (max-width: 768px) {
+    .project-search-container {
+        min-width: 100% !important;
+        margin-bottom: 10px;
+    }
+    
+    .project-search-input,
+    #backlog-project {
+        min-width: 100% !important;
+    }
+    
+    #backlog-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    #backlog-controls label {
+        margin-bottom: 5px;
+    }
 } 

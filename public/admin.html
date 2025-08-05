@@ -266,9 +266,16 @@
                 <h3>📝 Jira Backlog Management</h3>
                             <div id="backlog-controls" class="filter-row" style="margin-bottom: 15px;">
                 <label>Project:</label>
-                <select id="backlog-project" class="form-control" style="min-width: 150px;">
-                    <option value="">Select Project</option>
-                </select>
+                <div class="project-search-container" style="position: relative; display: inline-block; min-width: 200px;">
+                    <input id="project-search" type="text" placeholder="🔍 Search projects..." class="form-control project-search-input" 
+                           style="padding-right: 25px; min-width: 200px;" autocomplete="off">
+                    <select id="backlog-project" class="form-control" style="min-width: 200px; margin-top: 5px;">
+                        <option value="">Select Project</option>
+                    </select>
+                    <div id="project-count" class="project-count" style="font-size: 0.8em; color: #64748b; margin-top: 2px;">
+                        Loading projects...
+                    </div>
+                </div>
                 <button id="refresh-projects-btn" class="btn btn-secondary" title="Refresh project list">🔄 Refresh</button>
                 <button id="load-epics-btn" class="btn btn-secondary" disabled>📂 Load Epics</button>
                 <button id="create-epic-btn" class="btn btn-primary" disabled>➕ Create Epic</button>
@@ -705,6 +712,8 @@
 
         // Backlog Management Elements
         const backlogProject = document.getElementById('backlog-project');
+        const projectSearch = document.getElementById('project-search');
+        const projectCount = document.getElementById('project-count');
         const refreshProjectsBtn = document.getElementById('refresh-projects-btn');
         const loadEpicsBtn = document.getElementById('load-epics-btn');
         const createEpicBtn = document.getElementById('create-epic-btn');
@@ -724,6 +733,7 @@
 
         // State variables
         let availableProjects = [];
+        let filteredProjects = [];
         let currentEpics = [];
         let selectedProject = null;
 
@@ -949,12 +959,14 @@
                 
                 if (!config.enabled || !config.hasApiToken) {
                     backlogProject.innerHTML = '<option value="">⚠️ Configure Jira first (API Token needed)</option>';
+                    projectCount.textContent = 'Configure Jira first';
                     disableBacklogControls();
                     return;
                 }
                 
                 // Show loading state
                 backlogProject.innerHTML = '<option value="">🔄 Loading projects...</option>';
+                projectCount.textContent = 'Loading projects...';
                 
                 const response = await fetch('/api/jira/projects', {
                     headers: { 'Content-Type': 'application/json' }
@@ -963,39 +975,83 @@
                 if (response.ok) {
                     const result = await response.json();
                     if (result.success && result.projects && result.projects.length > 0) {
-                        availableProjects = result.projects;
+                        availableProjects = result.projects.sort((a, b) => a.key.localeCompare(b.key));
+                        filteredProjects = [...availableProjects];
                         
-                        backlogProject.innerHTML = '<option value="">Select Project</option>';
-                        availableProjects.forEach(project => {
-                            const option = document.createElement('option');
-                            option.value = project.key;
-                            option.textContent = `${project.key} - ${project.name}`;
-                            backlogProject.appendChild(option);
-                        });
+                        populateDropdownOptions(filteredProjects);
+                        updateProjectCount();
                         
                         enableBacklogControls();
-                        console.log(`✅ Populated ${availableProjects.length} projects in dropdown`);
+                        console.log(`✅ Loaded ${availableProjects.length} projects total`);
                         showNotification(`✅ Loaded ${availableProjects.length} Jira projects`, 'success');
                     } else {
                         backlogProject.innerHTML = '<option value="">No projects found</option>';
+                        projectCount.textContent = 'No projects found';
                         disableBacklogControls();
                         console.warn('No projects returned from Jira API');
                     }
                 } else if (response.status === 401) {
                     backlogProject.innerHTML = '<option value="">⚠️ Jira authentication failed</option>';
+                    projectCount.textContent = 'Authentication failed';
                     disableBacklogControls();
                     showNotification('❌ Jira authentication failed. Please check your API token.', 'error');
                 } else {
                     backlogProject.innerHTML = '<option value="">❌ Error loading projects</option>';
+                    projectCount.textContent = 'Error loading projects';
                     disableBacklogControls();
                     console.error('Failed to fetch projects:', response.status);
                     showNotification('❌ Failed to load Jira projects', 'error');
                 }
             } catch (error) {
                 backlogProject.innerHTML = '<option value="">❌ Connection error</option>';
+                projectCount.textContent = 'Connection error';
                 disableBacklogControls();
                 console.error('Error populating project dropdown:', error);
                 showNotification('❌ Error connecting to Jira', 'error');
+            }
+        }
+
+        function populateDropdownOptions(projects) {
+            backlogProject.innerHTML = '<option value="">Select Project</option>';
+            projects.forEach(project => {
+                const option = document.createElement('option');
+                option.value = project.key;
+                option.textContent = `${project.key} - ${project.name}`;
+                backlogProject.appendChild(option);
+            });
+        }
+
+        function updateProjectCount() {
+            const total = availableProjects.length;
+            const showing = filteredProjects.length;
+            
+            if (showing === total) {
+                projectCount.textContent = `${total} projects`;
+            } else {
+                projectCount.textContent = `${showing}/${total} projects`;
+            }
+        }
+
+        function filterProjects(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+            
+            if (!term) {
+                filteredProjects = [...availableProjects];
+            } else {
+                filteredProjects = availableProjects.filter(project => 
+                    project.key.toLowerCase().includes(term) || 
+                    project.name.toLowerCase().includes(term)
+                );
+            }
+            
+            populateDropdownOptions(filteredProjects);
+            updateProjectCount();
+            
+            // Clear selection if current selection is not in filtered results
+            if (selectedProject && !filteredProjects.find(p => p.key === selectedProject)) {
+                selectedProject = null;
+                backlogProject.value = '';
+                disableEpicButtons();
             }
         }
 
@@ -1007,6 +1063,10 @@
         function disableBacklogControls() {
             // Disable all backlog controls
             backlogProject.disabled = false; // Keep dropdown enabled to show messages
+            disableEpicButtons();
+        }
+
+        function disableEpicButtons() {
             loadEpicsBtn.disabled = true;
             createEpicBtn.disabled = true;
             createStoryBtn.disabled = true;
@@ -1244,9 +1304,25 @@
             }
         });
 
+        // Project search functionality
+        projectSearch.addEventListener('input', (e) => {
+            filterProjects(e.target.value);
+        });
+
+        // Clear search on Escape key
+        projectSearch.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                projectSearch.value = '';
+                filterProjects('');
+            }
+        });
+
         refreshProjectsBtn.addEventListener('click', async () => {
             refreshProjectsBtn.disabled = true;
             refreshProjectsBtn.innerHTML = '🔄 Loading...';
+            
+            // Clear search when refreshing
+            projectSearch.value = '';
             
             try {
                 await populateProjectDropdown();
