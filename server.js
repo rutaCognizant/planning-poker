@@ -5,10 +5,11 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const session = require('express-session');
 
-// Import admin, history, and jira modules
+// Import admin, history, jira, and version modules
 const historyLogger = require('./history');
 const adminAuth = require('./admin');
 const jira = require('./jira');
+const versionInfo = require('./version');
 
 const app = express();
 const server = http.createServer(app);
@@ -271,6 +272,25 @@ app.post('/api/jira/search', adminAuth.requireAdmin, async (req, res) => {
   }
 });
 
+// Version Info API Routes
+app.get('/api/version', (req, res) => {
+  try {
+    res.json(versionInfo.getVersionInfo());
+  } catch (error) {
+    console.error('Version info error:', error);
+    res.status(500).json({ error: 'Failed to get version info' });
+  }
+});
+
+app.get('/api/version/short', (req, res) => {
+  try {
+    res.json(versionInfo.getShortVersion());
+  } catch (error) {
+    console.error('Short version info error:', error);
+    res.status(500).json({ error: 'Failed to get version info' });
+  }
+});
+
 // Public Jira endpoints (for room users)
 app.get('/api/jira/status', async (req, res) => {
   try {
@@ -364,6 +384,85 @@ app.post('/api/jira/update-story-points', adminAuth.requireAdmin, async (req, re
   } catch (error) {
     console.error('Jira update story points error:', error);
     res.status(500).json({ error: 'Failed to update story points in Jira' });
+  }
+});
+
+// Jira Backlog Management API Routes
+app.get('/api/jira/epics/:projectKey', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const { projectKey } = req.params;
+    const result = await jira.getEpics(projectKey);
+    res.json(result);
+  } catch (error) {
+    console.error('Get epics error:', error);
+    res.status(500).json({ error: 'Failed to fetch epics' });
+  }
+});
+
+app.post('/api/jira/create-epic', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const { projectKey, epicData } = req.body;
+    
+    if (!projectKey || !epicData || !epicData.summary) {
+      return res.status(400).json({ error: 'Project key and epic summary are required' });
+    }
+    
+    const result = await jira.createEpic(projectKey, epicData);
+    
+    if (result.success) {
+      // Log epic creation
+      await historyLogger.logAction({
+        action: 'jira_epic_created',
+        userName: req.session.adminUsername || 'admin',
+        roomId: null,
+        details: { 
+          projectKey,
+          epicKey: result.epic.key,
+          epicSummary: epicData.summary
+        },
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Create epic error:', error);
+    res.status(500).json({ error: 'Failed to create epic in Jira' });
+  }
+});
+
+app.post('/api/jira/create-story', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const { projectKey, storyData, epicKey } = req.body;
+    
+    if (!projectKey || !storyData || !storyData.summary) {
+      return res.status(400).json({ error: 'Project key and story summary are required' });
+    }
+    
+    const result = await jira.createStory(projectKey, storyData, epicKey);
+    
+    if (result.success) {
+      // Log story creation
+      await historyLogger.logAction({
+        action: 'jira_story_created',
+        userName: req.session.adminUsername || 'admin',
+        roomId: null,
+        details: { 
+          projectKey,
+          storyKey: result.story.key,
+          storySummary: storyData.summary,
+          epicKey: epicKey || null
+        },
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Create story error:', error);
+    res.status(500).json({ error: 'Failed to create story in Jira' });
   }
 });
 

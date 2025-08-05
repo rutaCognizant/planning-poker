@@ -568,4 +568,41 @@ socket.on('connect', () => {
 
 socket.on('disconnect', () => {
     showNotification('Disconnected from server', 'error');
-}); 
+});
+
+// Version Info Functions
+async function loadVersionInfo() {
+    try {
+        const response = await fetch('/api/version/short');
+        const versionData = await response.json();
+        
+        const versionText = document.getElementById('version-text');
+        const environmentBadge = document.getElementById('environment-badge');
+        const versionInfo = document.getElementById('version-info');
+        
+        if (versionText && environmentBadge && versionInfo) {
+            versionText.textContent = `v${versionData.version}`;
+            environmentBadge.textContent = versionData.environment.toUpperCase();
+            environmentBadge.className = `environment-badge ${versionData.environment}`;
+            
+            // Add detailed tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = 'version-tooltip';
+            tooltip.innerHTML = `
+                <div class="version-detail"><span>Version:</span> <strong>v${versionData.version}</strong></div>
+                <div class="version-detail"><span>Environment:</span> <strong>${versionData.environment}</strong></div>
+                <div class="version-detail"><span>Built:</span> <strong>${versionData.buildDate}</strong></div>
+            `;
+            versionInfo.appendChild(tooltip);
+        }
+    } catch (error) {
+        console.error('Failed to load version info:', error);
+        const versionText = document.getElementById('version-text');
+        if (versionText) {
+            versionText.textContent = 'v2.1.0';
+        }
+    }
+}
+
+// Load version info on page load
+document.addEventListener('DOMContentLoaded', loadVersionInfo); 

@@ -260,6 +260,124 @@
                 </div>
             </div>
 
+            <!-- Jira Backlog Management -->
+            <div class="filters">
+                <h3>📝 Jira Backlog Management</h3>
+                <div id="backlog-controls" class="filter-row" style="margin-bottom: 15px;">
+                    <label>Project:</label>
+                    <select id="backlog-project" class="form-control" style="min-width: 150px;">
+                        <option value="">Select Project</option>
+                    </select>
+                    <button id="load-epics-btn" class="btn btn-secondary" disabled>📂 Load Epics</button>
+                    <button id="create-epic-btn" class="btn btn-primary" disabled>➕ Create Epic</button>
+                    <button id="create-story-btn" class="btn btn-primary" disabled>📄 Create Story</button>
+                </div>
+                
+                <div id="epics-section" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                    <h4>📋 Epics in Project</h4>
+                    <div id="epics-list" style="max-height: 300px; overflow-y: auto; background: #f8fafc; padding: 10px; border-radius: 6px;">
+                        Loading epics...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Epic Creation Modal -->
+            <div id="epic-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Create New Epic</h3>
+                        <button id="close-epic-modal" class="close-btn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Epic Name *</label>
+                            <input type="text" id="epic-name" class="form-control" placeholder="Epic name (will be used as summary)" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="epic-description" class="form-control" rows="4" placeholder="Epic description..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Priority</label>
+                            <select id="epic-priority" class="form-control">
+                                <option value="">Default</option>
+                                <option value="Highest">Highest</option>
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                                <option value="Lowest">Lowest</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Assignee</label>
+                            <input type="text" id="epic-assignee" class="form-control" placeholder="Username (optional)">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="cancel-epic" class="btn btn-secondary">Cancel</button>
+                        <button id="save-epic" class="btn btn-primary">Create Epic</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Story Creation Modal -->
+            <div id="story-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Create New Story</h3>
+                        <button id="close-story-modal" class="close-btn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Story Summary *</label>
+                            <input type="text" id="story-summary" class="form-control" placeholder="As a user, I want to..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="story-description" class="form-control" rows="4" placeholder="Story description and acceptance criteria..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Link to Epic</label>
+                            <select id="story-epic" class="form-control">
+                                <option value="">No Epic</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Story Points</label>
+                            <select id="story-points" class="form-control">
+                                <option value="">Not Estimated</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="5">5</option>
+                                <option value="8">8</option>
+                                <option value="13">13</option>
+                                <option value="21">21</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Priority</label>
+                            <select id="story-priority" class="form-control">
+                                <option value="">Default</option>
+                                <option value="Highest">Highest</option>
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                                <option value="Lowest">Lowest</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Assignee</label>
+                            <input type="text" id="story-assignee" class="form-control" placeholder="Username (optional)">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="cancel-story" class="btn btn-secondary">Cancel</button>
+                        <button id="save-story" class="btn btn-primary">Create Story</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Filters -->
             <div class="filters">
                 <h3>🔍 Filter Actions</h3>
@@ -283,6 +401,8 @@
                         <option value="jira_config_updated">Jira Config Updated</option>
                         <option value="jira_connection_tested">Jira Connection Tested</option>
                         <option value="jira_story_points_updated">Jira Story Points Updated</option>
+                        <option value="jira_epic_created">Jira Epic Created</option>
+                        <option value="jira_story_created">Jira Story Created</option>
                     </select>
                     
                     <button id="apply-filters" class="btn btn-primary">Apply</button>
@@ -312,6 +432,14 @@
     </div>
 
     <div id="notification" class="notification"></div>
+    
+    <!-- Version Info -->
+    <div id="version-info" class="version-info">
+        <div class="version-content">
+            <span id="version-text">Loading...</span>
+            <span id="environment-badge" class="environment-badge">DEV</span>
+        </div>
+    </div>
 
     <script>
         let isLoggedIn = false;
@@ -572,6 +700,29 @@
         const jiraProjectsSection = document.getElementById('jira-projects-section');
         const jiraProjectsList = document.getElementById('jira-projects-list');
 
+        // Backlog Management Elements
+        const backlogProject = document.getElementById('backlog-project');
+        const loadEpicsBtn = document.getElementById('load-epics-btn');
+        const createEpicBtn = document.getElementById('create-epic-btn');
+        const createStoryBtn = document.getElementById('create-story-btn');
+        const epicsSection = document.getElementById('epics-section');
+        const epicsList = document.getElementById('epics-list');
+
+        // Modal Elements
+        const epicModal = document.getElementById('epic-modal');
+        const storyModal = document.getElementById('story-modal');
+        const closeEpicModal = document.getElementById('close-epic-modal');
+        const closeStoryModal = document.getElementById('close-story-modal');
+        const cancelEpic = document.getElementById('cancel-epic');
+        const cancelStory = document.getElementById('cancel-story');
+        const saveEpic = document.getElementById('save-epic');
+        const saveStory = document.getElementById('save-story');
+
+        // State variables
+        let availableProjects = [];
+        let currentEpics = [];
+        let selectedProject = null;
+
         // Jira functions
         async function loadJiraConfig() {
             try {
@@ -730,6 +881,220 @@
             }
         }
 
+        // Backlog Management Functions
+        async function populateProjectDropdown() {
+            if (availableProjects.length === 0) {
+                await fetchJiraProjects();
+            }
+            
+            backlogProject.innerHTML = '<option value="">Select Project</option>';
+            availableProjects.forEach(project => {
+                const option = document.createElement('option');
+                option.value = project.key;
+                option.textContent = `${project.key} - ${project.name}`;
+                backlogProject.appendChild(option);
+            });
+        }
+
+        async function loadEpics() {
+            if (!selectedProject) return;
+            
+            loadEpicsBtn.innerHTML = '<span class="loading-spinner"></span>Loading...';
+            loadEpicsBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`/api/jira/epics/${selectedProject}`, {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentEpics = result.epics;
+                    displayEpics(result.epics);
+                    epicsSection.style.display = 'block';
+                    populateEpicDropdown();
+                } else {
+                    showNotification(`Failed to load epics: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to load epics', 'error');
+            } finally {
+                loadEpicsBtn.innerHTML = '📂 Load Epics';
+                loadEpicsBtn.disabled = false;
+            }
+        }
+
+        function displayEpics(epics) {
+            if (epics.length === 0) {
+                epicsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #64748b;">No epics found in this project.</div>';
+                return;
+            }
+            
+            epicsList.innerHTML = epics.map(epic => `
+                <div class="epic-item">
+                    <div class="epic-header">
+                        <span class="epic-key">${epic.key}</span>
+                        <span class="epic-status">${epic.status?.name || 'Unknown'}</span>
+                    </div>
+                    <div class="epic-title">${epic.summary}</div>
+                    <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <span class="story-count">Epic • ${epic.epicName || epic.summary}</span>
+                        <a href="${epic.url}" target="_blank" style="color: #667eea; text-decoration: none; font-size: 12px;">View in Jira →</a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populateEpicDropdown() {
+            const storyEpicSelect = document.getElementById('story-epic');
+            storyEpicSelect.innerHTML = '<option value="">No Epic</option>';
+            
+            currentEpics.forEach(epic => {
+                const option = document.createElement('option');
+                option.value = epic.key;
+                option.textContent = `${epic.key} - ${epic.summary}`;
+                storyEpicSelect.appendChild(option);
+            });
+        }
+
+        function openEpicModal() {
+            if (!selectedProject) {
+                showNotification('Please select a project first', 'error');
+                return;
+            }
+            
+            // Clear form
+            document.getElementById('epic-name').value = '';
+            document.getElementById('epic-description').value = '';
+            document.getElementById('epic-priority').value = '';
+            document.getElementById('epic-assignee').value = '';
+            
+            epicModal.style.display = 'flex';
+        }
+
+        function openStoryModal() {
+            if (!selectedProject) {
+                showNotification('Please select a project first', 'error');
+                return;
+            }
+            
+            // Clear form
+            document.getElementById('story-summary').value = '';
+            document.getElementById('story-description').value = '';
+            document.getElementById('story-epic').value = '';
+            document.getElementById('story-points').value = '';
+            document.getElementById('story-priority').value = '';
+            document.getElementById('story-assignee').value = '';
+            
+            populateEpicDropdown();
+            storyModal.style.display = 'flex';
+        }
+
+        function closeModals() {
+            epicModal.style.display = 'none';
+            storyModal.style.display = 'none';
+        }
+
+        async function createEpic() {
+            const epicName = document.getElementById('epic-name').value.trim();
+            const epicDescription = document.getElementById('epic-description').value.trim();
+            const epicPriority = document.getElementById('epic-priority').value;
+            const epicAssignee = document.getElementById('epic-assignee').value.trim();
+            
+            if (!epicName) {
+                showNotification('Epic name is required', 'error');
+                return;
+            }
+            
+            saveEpic.innerHTML = '<span class="loading-spinner"></span>Creating...';
+            saveEpic.disabled = true;
+            
+            try {
+                const response = await fetch('/api/jira/create-epic', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        projectKey: selectedProject,
+                        epicData: {
+                            epicName,
+                            summary: epicName,
+                            description: epicDescription || null,
+                            priority: epicPriority || null,
+                            assignee: epicAssignee || null
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`Epic ${result.epic.key} created successfully!`, 'success');
+                    closeModals();
+                    loadEpics(); // Refresh epics list
+                } else {
+                    showNotification(`Failed to create epic: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to create epic', 'error');
+            } finally {
+                saveEpic.innerHTML = 'Create Epic';
+                saveEpic.disabled = false;
+            }
+        }
+
+        async function createStory() {
+            const storySummary = document.getElementById('story-summary').value.trim();
+            const storyDescription = document.getElementById('story-description').value.trim();
+            const storyEpic = document.getElementById('story-epic').value;
+            const storyPoints = document.getElementById('story-points').value;
+            const storyPriority = document.getElementById('story-priority').value;
+            const storyAssignee = document.getElementById('story-assignee').value.trim();
+            
+            if (!storySummary) {
+                showNotification('Story summary is required', 'error');
+                return;
+            }
+            
+            saveStory.innerHTML = '<span class="loading-spinner"></span>Creating...';
+            saveStory.disabled = true;
+            
+            try {
+                const response = await fetch('/api/jira/create-story', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        projectKey: selectedProject,
+                        epicKey: storyEpic || null,
+                        storyData: {
+                            summary: storySummary,
+                            description: storyDescription || null,
+                            storyPoints: storyPoints ? parseInt(storyPoints) : null,
+                            priority: storyPriority || null,
+                            assignee: storyAssignee || null
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`Story ${result.story.key} created successfully!`, 'success');
+                    closeModals();
+                    // Optionally refresh epics if story was linked to an epic
+                    if (storyEpic) {
+                        loadEpics();
+                    }
+                } else {
+                    showNotification(`Failed to create story: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to create story', 'error');
+            } finally {
+                saveStory.innerHTML = 'Create Story';
+                saveStory.disabled = false;
+            }
+        }
+
         // Jira Event Listeners
         showTokenBtn.addEventListener('click', () => {
             const input = jiraApiToken;
@@ -747,10 +1112,90 @@
         fetchJiraProjectsBtn.addEventListener('click', fetchJiraProjects);
         detectStoryPointsFieldBtn.addEventListener('click', detectStoryPointsField);
 
+        // Backlog Management Event Listeners
+        backlogProject.addEventListener('change', (e) => {
+            selectedProject = e.target.value;
+            const hasProject = selectedProject !== '';
+            
+            loadEpicsBtn.disabled = !hasProject;
+            createEpicBtn.disabled = !hasProject;
+            createStoryBtn.disabled = !hasProject;
+            
+            if (hasProject) {
+                populateProjectDropdown();
+            } else {
+                epicsSection.style.display = 'none';
+            }
+        });
+
+        loadEpicsBtn.addEventListener('click', loadEpics);
+        createEpicBtn.addEventListener('click', openEpicModal);
+        createStoryBtn.addEventListener('click', openStoryModal);
+
+        // Modal Event Listeners
+        closeEpicModal.addEventListener('click', closeModals);
+        closeStoryModal.addEventListener('click', closeModals);
+        cancelEpic.addEventListener('click', closeModals);
+        cancelStory.addEventListener('click', closeModals);
+        saveEpic.addEventListener('click', createEpic);
+        saveStory.addEventListener('click', createStory);
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target === epicModal || e.target === storyModal) {
+                closeModals();
+            }
+        });
+
+        // Load projects on Jira config change
+        async function onJiraConfigChange() {
+            await populateProjectDropdown();
+        }
+
         // Load Jira config on page load
         if (isLoggedIn) {
             loadJiraConfig();
         }
+
+        // Version Info Functions
+        async function loadVersionInfo() {
+            try {
+                const response = await fetch('/api/version');
+                const versionData = await response.json();
+                
+                const versionText = document.getElementById('version-text');
+                const environmentBadge = document.getElementById('environment-badge');
+                const versionInfo = document.getElementById('version-info');
+                
+                if (versionText && environmentBadge && versionInfo) {
+                    versionText.textContent = `v${versionData.version}`;
+                    environmentBadge.textContent = versionData.environment.toUpperCase();
+                    environmentBadge.className = `environment-badge ${versionData.environment}`;
+                    
+                    // Add detailed tooltip with admin-specific info
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'version-tooltip';
+                    tooltip.innerHTML = `
+                        <div class="version-detail"><span>Version:</span> <strong>v${versionData.version}</strong></div>
+                        <div class="version-detail"><span>Environment:</span> <strong>${versionData.environment}</strong></div>
+                        <div class="version-detail"><span>Built:</span> <strong>${versionData.buildDateFormatted}</strong></div>
+                        <div class="version-detail"><span>Uptime:</span> <strong>${versionData.uptime}</strong></div>
+                        <div class="version-detail"><span>Node:</span> <strong>${versionData.nodeVersion}</strong></div>
+                        <div class="version-detail"><span>Platform:</span> <strong>${versionData.platform}</strong></div>
+                    `;
+                    versionInfo.appendChild(tooltip);
+                }
+            } catch (error) {
+                console.error('Failed to load version info:', error);
+                const versionText = document.getElementById('version-text');
+                if (versionText) {
+                    versionText.textContent = 'v2.1.0';
+                }
+            }
+        }
+
+        // Load version info immediately
+        loadVersionInfo();
 
         // Auto-refresh actions every 30 seconds
         setInterval(() => {

@@ -167,7 +167,10 @@ class JiraIntegration {
                             for (const issueType of metadata.projects[0].issuetypes) {
                                 if (issueType.fields) {
                                     for (const [fieldId, fieldInfo] of Object.entries(issueType.fields)) {
-                                        if (fieldInfo.name && fieldInfo.name.toLowerCase().includes('story point')) {
+                                        if (fieldInfo.name && (
+                                            fieldInfo.name.toLowerCase().includes('story point estimate') ||
+                                            fieldInfo.name.toLowerCase().includes('story point')
+                                        )) {
                                             this.config.storyPointsField = fieldId;
                                             this.saveConfig();
                                             return {
@@ -383,6 +386,150 @@ class JiraIntegration {
                     to: t.to.name
                 }))
             };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    async createEpic(projectKey, epicData) {
+        try {
+            const issueData = {
+                fields: {
+                    project: { key: projectKey },
+                    issuetype: { name: 'Epic' },
+                    summary: epicData.summary,
+                    description: this.formatDescription(epicData.description),
+                    priority: epicData.priority ? { name: epicData.priority } : undefined,
+                    assignee: epicData.assignee ? { name: epicData.assignee } : undefined,
+                    // Epic Name (customfield_10011 is common, but may vary)
+                    customfield_10011: epicData.epicName || epicData.summary
+                }
+            };
+
+            // Remove undefined fields
+            Object.keys(issueData.fields).forEach(key => {
+                if (issueData.fields[key] === undefined) {
+                    delete issueData.fields[key];
+                }
+            });
+
+            const result = await this.makeJiraRequest('/rest/api/3/issue', {
+                method: 'POST',
+                body: issueData
+            });
+
+            return {
+                success: true,
+                epic: {
+                    key: result.key,
+                    id: result.id,
+                    url: `${this.config.url}/browse/${result.key}`
+                }
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    async createStory(projectKey, storyData, epicKey = null) {
+        try {
+            const issueData = {
+                fields: {
+                    project: { key: projectKey },
+                    issuetype: { name: 'Story' },
+                    summary: storyData.summary,
+                    description: this.formatDescription(storyData.description),
+                    priority: storyData.priority ? { name: storyData.priority } : undefined,
+                    assignee: storyData.assignee ? { name: storyData.assignee } : undefined
+                }
+            };
+
+            // Add epic link if provided
+            if (epicKey) {
+                // Epic Link field (customfield_10014 is common, but may vary)
+                issueData.fields.customfield_10014 = epicKey;
+            }
+
+            // Add story points if provided
+            if (storyData.storyPoints && this.config.storyPointsField) {
+                issueData.fields[this.config.storyPointsField] = storyData.storyPoints;
+            }
+
+            // Remove undefined fields
+            Object.keys(issueData.fields).forEach(key => {
+                if (issueData.fields[key] === undefined) {
+                    delete issueData.fields[key];
+                }
+            });
+
+            const result = await this.makeJiraRequest('/rest/api/3/issue', {
+                method: 'POST',
+                body: issueData
+            });
+
+            return {
+                success: true,
+                story: {
+                    key: result.key,
+                    id: result.id,
+                    url: `${this.config.url}/browse/${result.key}`
+                }
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    formatDescription(description) {
+        if (!description) return null;
+
+        // Convert plain text to Atlassian Document Format (ADF)
+        return {
+            type: 'doc',
+            version: 1,
+            content: [
+                {
+                    type: 'paragraph',
+                    content: [
+                        {
+                            type: 'text',
+                            text: description
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    async getEpics(projectKey) {
+        try {
+            const jql = `project = "${projectKey}" AND issuetype = Epic ORDER BY created DESC`;
+            const result = await this.searchIssues(jql, ['summary', 'status', 'customfield_10011'], 50);
+            
+            if (result.success) {
+                return {
+                    success: true,
+                    epics: result.issues.map(epic => ({
+                        key: epic.key,
+                        id: epic.id,
+                        summary: epic.summary,
+                        status: epic.status,
+                        epicName: epic.fields?.customfield_10011,
+                        url: epic.url
+                    }))
+                };
+            } else {
+                return result;
+            }
         } catch (error) {
             return {
                 success: false,
