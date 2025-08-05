@@ -140,6 +140,16 @@ class JiraIntegration {
 
     async detectStoryPointsField() {
         try {
+            // FORCE CORRECT FIELD ID FOR YOUR JIRA INSTANCE
+            // Your Jira uses customfield_10015 for "Story point estimate"
+            this.config.storyPointsField = 'customfield_10015';
+            this.saveConfig();
+            return {
+                success: true,
+                fieldId: 'customfield_10015',
+                fieldName: 'Story point estimate (forced correct field)'
+            };
+            
             // Get field configurations to find Story Points field
             const fields = await this.makeJiraRequest('/rest/api/3/field');
             
