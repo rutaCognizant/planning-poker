@@ -36,7 +36,8 @@ class VersionInfo {
                 month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                timeZone: 'Europe/Helsinki' // EET (UTC+2/UTC+3 with DST)
             }),
             uptime: null // Will be calculated dynamically
         };
