@@ -499,6 +499,44 @@ app.post('/api/jira/create-story', adminAuth.requireAdmin, async (req, res) => {
   }
 });
 
+// Selected Project endpoints
+app.get('/api/jira/selected-project', async (req, res) => {
+  try {
+    const result = jira.getSelectedProjectInfo();
+    res.json(result);
+  } catch (error) {
+    console.error('Get selected project error:', error);
+    res.status(500).json({ error: 'Failed to get selected project' });
+  }
+});
+
+app.post('/api/jira/selected-project', adminAuth.requireAdmin, async (req, res) => {
+  try {
+    const { projectKey } = req.body;
+    const result = jira.setSelectedProject(projectKey);
+    
+    // Log project selection
+    if (result.success) {
+      await historyLogger.logAction({
+        action: 'jira_project_selected',
+        userName: req.session.adminUsername || 'admin',
+        roomId: null,
+        details: { 
+          projectKey: projectKey,
+          selectedProject: result.selectedProject
+        },
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Set selected project error:', error);
+    res.status(500).json({ error: 'Failed to set selected project' });
+  }
+});
+
 // In-memory storage for rooms and sessions
 const rooms = new Map();
 

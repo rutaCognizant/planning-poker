@@ -261,6 +261,27 @@
                 </div>
             </div>
 
+            <!-- Selected Project for Room Estimation -->
+            <div class="filters">
+                <h3>🎯 Selected Project for Room Estimation</h3>
+                <div class="filter-row" style="margin-bottom: 15px;">
+                    <label>Current Selected Project:</label>
+                    <div id="selected-project-display" style="flex: 1; padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-family: monospace;">
+                        Loading...
+                    </div>
+                </div>
+                <div class="filter-row" style="margin-bottom: 15px;">
+                    <label>Set Project for Room:</label>
+                    <select id="room-project-selector" class="form-control" style="flex: 1;">
+                        <option value="">No Project Selected</option>
+                    </select>
+                    <button id="set-room-project" class="btn btn-primary" style="margin-left: 10px;">🎯 Set Project</button>
+                </div>
+                <div style="font-size: 0.9em; color: #64748b; margin-top: 10px;">
+                    💡 This project will be used for Jira issue imports in poker rooms. Only issues from this project will be shown when searching in rooms.
+                </div>
+            </div>
+
             <!-- Jira Backlog Management -->
             <div class="filters">
                 <h3>📝 Jira Backlog Management</h3>
@@ -412,6 +433,7 @@
                         <option value="jira_story_points_updated">Jira Story Points Updated</option>
                         <option value="jira_epic_created">Jira Epic Created</option>
                         <option value="jira_story_created">Jira Story Created</option>
+                        <option value="jira_project_selected">Jira Project Selected</option>
                     </select>
                     
                     <button id="apply-filters" class="btn btn-primary">Apply</button>
@@ -710,6 +732,11 @@
         const jiraProjectsSection = document.getElementById('jira-projects-section');
         const jiraProjectsList = document.getElementById('jira-projects-list');
 
+        // Selected Project Elements
+        const selectedProjectDisplay = document.getElementById('selected-project-display');
+        const roomProjectSelector = document.getElementById('room-project-selector');
+        const setRoomProjectBtn = document.getElementById('set-room-project');
+
         // Backlog Management Elements
         const backlogProject = document.getElementById('backlog-project');
         const projectSearch = document.getElementById('project-search');
@@ -774,6 +801,89 @@
                 fetchJiraProjectsBtn.style.display = 'none';
                 detectStoryPointsFieldBtn.style.display = 'none';
                 detectEpicNameFieldBtn.style.display = 'none';
+            }
+        }
+
+        // Selected Project Functions
+        async function loadSelectedProject() {
+            try {
+                const response = await fetch('/api/jira/selected-project');
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.selectedProject && result.projectInfo) {
+                        selectedProjectDisplay.innerHTML = `
+                            <strong>${result.projectInfo.key}</strong> - ${result.projectInfo.name}
+                            <span style="color: #059669; margin-left: 10px;">✅ Selected</span>
+                        `;
+                        selectedProjectDisplay.style.color = '#059669';
+                    } else {
+                        selectedProjectDisplay.innerHTML = `
+                            <span style="color: #d97706;">⚠️ No project selected for room estimation</span>
+                        `;
+                        selectedProjectDisplay.style.color = '#d97706';
+                    }
+                } else {
+                    selectedProjectDisplay.innerHTML = `
+                        <span style="color: #dc2626;">❌ Error loading selected project</span>
+                    `;
+                    selectedProjectDisplay.style.color = '#dc2626';
+                }
+            } catch (error) {
+                console.error('Error loading selected project:', error);
+                selectedProjectDisplay.innerHTML = `
+                    <span style="color: #dc2626;">❌ Connection error</span>
+                `;
+                selectedProjectDisplay.style.color = '#dc2626';
+            }
+        }
+
+        function populateRoomProjectSelector() {
+            roomProjectSelector.innerHTML = '<option value="">No Project Selected</option>';
+            
+            if (availableProjects.length > 0) {
+                availableProjects.forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project.key;
+                    option.textContent = `${project.key} - ${project.name}`;
+                    roomProjectSelector.appendChild(option);
+                });
+            }
+        }
+
+        async function setRoomProject() {
+            const projectKey = roomProjectSelector.value;
+            
+            try {
+                setRoomProjectBtn.disabled = true;
+                setRoomProjectBtn.innerHTML = '<span class="loading-spinner"></span>Setting...';
+                
+                const response = await fetch('/api/jira/selected-project', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ projectKey })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (projectKey) {
+                        showNotification(`✅ Set ${projectKey} as room estimation project`, 'success');
+                    } else {
+                        showNotification('✅ Cleared room estimation project selection', 'success');
+                    }
+                    await loadSelectedProject();
+                } else {
+                    showNotification(`❌ Failed to set project: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error setting room project:', error);
+                showNotification('❌ Error setting room project', 'error');
+            } finally {
+                setRoomProjectBtn.disabled = false;
+                setRoomProjectBtn.innerHTML = '🎯 Set Project';
             }
         }
 
@@ -980,10 +1090,14 @@
                         
                         populateDropdownOptions(filteredProjects);
                         updateProjectCount();
+                        populateRoomProjectSelector();
                         
                         enableBacklogControls();
                         console.log(`✅ Loaded ${availableProjects.length} projects total`);
                         showNotification(`✅ Loaded ${availableProjects.length} Jira projects`, 'success');
+                        
+                        // Load selected project info after projects are loaded
+                        await loadSelectedProject();
                     } else {
                         backlogProject.innerHTML = '<option value="">No projects found</option>';
                         projectCount.textContent = 'No projects found';
@@ -1289,6 +1403,7 @@
         fetchJiraProjectsBtn.addEventListener('click', fetchJiraProjects);
         detectStoryPointsFieldBtn.addEventListener('click', detectStoryPointsField);
         detectEpicNameFieldBtn.addEventListener('click', detectEpicNameField);
+        setRoomProjectBtn.addEventListener('click', setRoomProject);
 
         // Backlog Management Event Listeners
         backlogProject.addEventListener('change', (e) => {

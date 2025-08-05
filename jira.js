@@ -11,7 +11,9 @@ class JiraIntegration {
             apiToken: null,
             projects: [],
             enabled: false,
-            storyPointsField: null
+            storyPointsField: null,
+            epicNameField: null,
+            selectedProject: null
         };
         this.configFile = path.join(__dirname, 'jira-config.json');
         this.loadConfig();
@@ -35,7 +37,10 @@ class JiraIntegration {
                 url: this.config.url,
                 email: this.config.email,
                 projects: this.config.projects,
-                enabled: this.config.enabled
+                enabled: this.config.enabled,
+                storyPointsField: this.config.storyPointsField,
+                epicNameField: this.config.epicNameField,
+                selectedProject: this.config.selectedProject
             };
             fs.writeFileSync(this.configFile, JSON.stringify(configToSave, null, 2));
         } catch (error) {
@@ -664,6 +669,67 @@ class JiraIntegration {
         }
         
         return query || 'project is not EMPTY ORDER BY created DESC';
+    }
+
+    // Selected Project Management
+    getSelectedProject() {
+        return {
+            success: true,
+            selectedProject: this.config.selectedProject
+        };
+    }
+
+    setSelectedProject(projectKey) {
+        try {
+            // Validate project exists in our projects list
+            if (projectKey && this.config.projects.length > 0) {
+                const project = this.config.projects.find(p => p.key === projectKey);
+                if (!project) {
+                    return {
+                        success: false,
+                        error: 'Project not found in available projects'
+                    };
+                }
+            }
+
+            this.config.selectedProject = projectKey;
+            this.saveConfig();
+            
+            return {
+                success: true,
+                selectedProject: this.config.selectedProject
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    getSelectedProjectInfo() {
+        try {
+            if (!this.config.selectedProject) {
+                return {
+                    success: true,
+                    selectedProject: null,
+                    projectInfo: null
+                };
+            }
+
+            const project = this.config.projects.find(p => p.key === this.config.selectedProject);
+            
+            return {
+                success: true,
+                selectedProject: this.config.selectedProject,
+                projectInfo: project || null
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
     }
 }
 

@@ -70,6 +70,12 @@
                     <button id="toggle-jira-import" class="btn btn-secondary">Show Jira Import</button>
                 </div>
                 <div id="jira-import-content" class="jira-import-content" style="display: none;">
+                    <div id="room-selected-project" class="room-selected-project">
+                        <div class="project-display">
+                            <span class="project-label">🎯 Selected Project:</span>
+                            <span id="room-project-info" class="room-project-info">Loading...</span>
+                        </div>
+                    </div>
                     <div class="jira-search">
                         <div class="search-controls">
                             <input type="text" id="jira-search-input" placeholder="Search stories or enter JQL..." class="jira-search-input">

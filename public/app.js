@@ -36,6 +36,7 @@ const jiraFilterBtns = document.querySelectorAll('.jira-filter-btn');
 const jiraResults = document.getElementById('jira-results');
 const jiraStoriesList = document.getElementById('jira-stories-list');
 const jiraResultsCount = document.getElementById('jira-results-count');
+const roomProjectInfo = document.getElementById('room-project-info');
 
 // State
 let currentRoom = null;
@@ -43,6 +44,7 @@ let currentUser = null;
 let hasVoted = false;
 let jiraStories = [];
 let currentStoryFromJira = null;
+let selectedProject = null;
 
 // Utility functions
 function showNotification(message, type = 'info') {
@@ -247,8 +249,9 @@ socket.on('room-created', (data) => {
     updateParticipants(data.room);
     showNotification('Room created successfully!', 'success');
     
-    // Check Jira configuration
+    // Check Jira configuration and load selected project
     checkJiraConfiguration();
+    loadSelectedProject();
 });
 
 socket.on('room-joined', (data) => {
@@ -270,8 +273,9 @@ socket.on('room-joined', (data) => {
     
     showNotification('Joined room successfully!', 'success');
     
-    // Check Jira configuration
+    // Check Jira configuration and load selected project
     checkJiraConfiguration();
+    loadSelectedProject();
 });
 
 socket.on('user-joined', (data) => {
@@ -358,6 +362,38 @@ async function checkJiraConfiguration() {
     }
 }
 
+async function loadSelectedProject() {
+    try {
+        const response = await fetch('/api/jira/selected-project');
+        const result = await response.json();
+        
+        if (result.success) {
+            if (result.selectedProject && result.projectInfo) {
+                selectedProject = result.projectInfo;
+                roomProjectInfo.innerHTML = `<strong>${result.projectInfo.key}</strong> - ${result.projectInfo.name}`;
+                roomProjectInfo.style.color = '#059669';
+                
+                // Update search placeholder to indicate project filtering
+                jiraSearchInput.placeholder = `Search in ${result.projectInfo.key} project or enter JQL...`;
+            } else {
+                selectedProject = null;
+                roomProjectInfo.innerHTML = '<span style="color: #d97706;">⚠️ No project selected</span>';
+                roomProjectInfo.style.color = '#d97706';
+                jiraSearchInput.placeholder = 'Search stories or enter JQL...';
+            }
+        } else {
+            selectedProject = null;
+            roomProjectInfo.innerHTML = '<span style="color: #dc2626;">❌ Error loading project</span>';
+            roomProjectInfo.style.color = '#dc2626';
+        }
+    } catch (error) {
+        console.error('Error loading selected project:', error);
+        selectedProject = null;
+        roomProjectInfo.innerHTML = '<span style="color: #dc2626;">❌ Connection error</span>';
+        roomProjectInfo.style.color = '#dc2626';
+    }
+}
+
 function toggleJiraImport() {
     const isVisible = jiraImportContent.style.display !== 'none';
     jiraImportContent.style.display = isVisible ? 'none' : 'block';
@@ -371,28 +407,47 @@ async function searchJiraStories(query = '', quickFilter = '') {
         
         let jql = '';
         
+        // Build base JQL with project filter if selected project exists
+        const projectFilter = selectedProject ? `project = "${selectedProject.key}"` : '';
+        
         if (quickFilter) {
             switch (quickFilter) {
                 case 'unestimated':
-                    jql = 'cf[10016] is EMPTY AND status != Done ORDER BY created DESC';
+                    jql = 'cf[10016] is EMPTY AND status != Done';
                     break;
                 case 'current-sprint':
-                    jql = 'sprint in openSprints() ORDER BY rank';
+                    jql = 'sprint in openSprints()';
                     break;
                 case 'backlog':
-                    jql = 'sprint is EMPTY AND status != Done ORDER BY priority DESC';
+                    jql = 'sprint is EMPTY AND status != Done';
                     break;
             }
         } else if (query) {
-            // If it looks like JQL, use it directly
+            // If it looks like JQL, use it directly (assume user knows what they're doing)
             if (query.toLowerCase().includes('project') || query.toLowerCase().includes('status') || query.toLowerCase().includes('sprint')) {
                 jql = query;
             } else {
                 // Otherwise, search in summary and description
-                jql = `(summary ~ "${query}" OR description ~ "${query}") AND status != Done ORDER BY created DESC`;
+                jql = `(summary ~ "${query}" OR description ~ "${query}") AND status != Done`;
             }
         } else {
-            jql = 'status != Done ORDER BY created DESC';
+            jql = 'status != Done';
+        }
+        
+        // Add project filter if we have a selected project and JQL doesn't already contain "project"
+        if (projectFilter && !jql.toLowerCase().includes('project')) {
+            jql = `${projectFilter} AND ${jql}`;
+        }
+        
+        // Add default ordering if not present
+        if (!jql.toLowerCase().includes('order by')) {
+            if (quickFilter === 'current-sprint') {
+                jql += ' ORDER BY rank';
+            } else if (quickFilter === 'backlog') {
+                jql += ' ORDER BY priority DESC';
+            } else {
+                jql += ' ORDER BY created DESC';
+            }
         }
         
         const response = await fetch('/api/jira/search-public', {
@@ -706,4 +761,5 @@ async function loadVersionInfo() {
 }
 
 // Load version info on page load
+document.addEventListener('DOMContentLoaded', loadVersionInfo); 
 document.addEventListener('DOMContentLoaded', loadVersionInfo); 
