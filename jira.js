@@ -140,14 +140,34 @@ class JiraIntegration {
 
     async detectStoryPointsField() {
         try {
-            // FORCE CORRECT FIELD ID FOR YOUR JIRA INSTANCE
-            // Your Jira uses customfield_10016 for "Story point estimate"
-            this.config.storyPointsField = 'customfield_10016';
-            this.saveConfig();
+            // DIAGNOSTIC MODE: Show ALL custom fields to find the correct one
+            const fields = await this.makeJiraRequest('/rest/api/3/field');
+            
+            // Filter only custom fields (customfield_*)
+            const customFields = fields.filter(field => field.id.startsWith('customfield_'));
+            
+            console.log('🔍 ALL CUSTOM FIELDS IN YOUR JIRA:');
+            customFields.forEach(field => {
+                console.log(`  ${field.id}: "${field.name}"`);
+            });
+            
+            // Look for story points related fields
+            const storyPointsFields = customFields.filter(field => 
+                field.name.toLowerCase().includes('story') && 
+                (field.name.toLowerCase().includes('point') || field.name.toLowerCase().includes('estimate'))
+            );
+            
+            console.log('🎯 STORY POINTS RELATED FIELDS:');
+            storyPointsFields.forEach(field => {
+                console.log(`  ${field.id}: "${field.name}"`);
+            });
+            
             return {
                 success: true,
-                fieldId: 'customfield_10016',
-                fieldName: 'Story point estimate (forced correct field)'
+                fieldId: 'DIAGNOSTIC_MODE',
+                fieldName: 'Check server logs for all available fields',
+                allCustomFields: customFields.map(f => ({ id: f.id, name: f.name })),
+                storyPointsFields: storyPointsFields.map(f => ({ id: f.id, name: f.name }))
             };
             
             // Get field configurations to find Story Points field
