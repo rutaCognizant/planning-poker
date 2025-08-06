@@ -140,10 +140,10 @@ class JiraIntegration {
 
     async detectStoryPointsField() {
         try {
-            // DIAGNOSTIC MODE: Show ALL custom fields to find the correct one
-            const fields = await this.makeJiraRequest('/rest/api/3/field');
+            console.log(`🔍 DETECTING STORY POINTS FIELD FOR: ${this.config.url}`);
             
-            // Filter only custom fields (customfield_*)
+            // Get all fields
+            const fields = await this.makeJiraRequest('/rest/api/3/field');
             const customFields = fields.filter(field => field.id.startsWith('customfield_'));
             
             console.log('🔍 ALL CUSTOM FIELDS IN YOUR JIRA:');
@@ -151,24 +151,68 @@ class JiraIntegration {
                 console.log(`  ${field.id}: "${field.name}"`);
             });
             
-            // Look for story points related fields
-            const storyPointsFields = customFields.filter(field => 
-                field.name.toLowerCase().includes('story') && 
-                (field.name.toLowerCase().includes('point') || field.name.toLowerCase().includes('estimate'))
-            );
+            // Look for story points related fields with multiple search patterns
+            const storyPointsFields = customFields.filter(field => {
+                const name = field.name.toLowerCase();
+                return (
+                    name.includes('story point') ||
+                    name.includes('story points') ||
+                    name.includes('story point estimate') ||
+                    name === 'points' ||
+                    name === 'story points' ||
+                    name === 'story point estimate'
+                );
+            });
             
             console.log('🎯 STORY POINTS RELATED FIELDS:');
             storyPointsFields.forEach(field => {
                 console.log(`  ${field.id}: "${field.name}"`);
             });
             
-            return {
-                success: true,
-                fieldId: 'DIAGNOSTIC_MODE',
-                fieldName: 'Check server logs for all available fields',
-                allCustomFields: customFields.map(f => ({ id: f.id, name: f.name })),
-                storyPointsFields: storyPointsFields.map(f => ({ id: f.id, name: f.name }))
-            };
+            // Auto-select the best match
+            let selectedField = null;
+            
+            // Priority order for field selection
+            const priorities = [
+                'story point estimate',
+                'story points', 
+                'story point',
+                'points'
+            ];
+            
+            for (const priority of priorities) {
+                selectedField = storyPointsFields.find(field => 
+                    field.name.toLowerCase() === priority
+                );
+                if (selectedField) break;
+            }
+            
+            // If no exact match, take the first story points related field
+            if (!selectedField && storyPointsFields.length > 0) {
+                selectedField = storyPointsFields[0];
+            }
+            
+            if (selectedField) {
+                console.log(`✅ SELECTED FIELD: ${selectedField.id} - "${selectedField.name}"`);
+                this.config.storyPointsField = selectedField.id;
+                this.saveConfig();
+                
+                return {
+                    success: true,
+                    fieldId: selectedField.id,
+                    fieldName: selectedField.name,
+                    jiraInstance: this.config.url,
+                    allStoryPointsFields: storyPointsFields.map(f => ({ id: f.id, name: f.name }))
+                };
+            } else {
+                console.log('❌ NO STORY POINTS FIELD FOUND');
+                return {
+                    success: false,
+                    error: 'No Story Points field found',
+                    jiraInstance: this.config.url,
+                    allCustomFields: customFields.map(f => ({ id: f.id, name: f.name }))
+                };
+            }
             
             // Get field configurations to find Story Points field
             const fields = await this.makeJiraRequest('/rest/api/3/field');
@@ -371,14 +415,14 @@ class JiraIntegration {
 
     async updateIssueStoryPoints(issueKey, storyPoints, comment = null) {
         try {
-            // FORCE RELOAD CONFIG TO ENSURE LATEST FIELD ID
+            console.log(`🔄 UPDATING STORY POINTS FOR: ${issueKey} on ${this.config.url}`);
+            
+            // RELOAD CONFIG TO ENSURE LATEST FIELD ID
             this.loadConfig();
             
-            // FORCE CORRECT FIELD ID FOR YOUR JIRA INSTANCE
-            this.config.storyPointsField = 'customfield_10016';
-            
-            // Auto-detect story points field if not already detected
+            // Auto-detect story points field if not configured
             if (!this.config.storyPointsField) {
+                console.log(`🔍 No story points field configured, detecting for ${this.config.url}...`);
                 const detection = await this.detectStoryPointsField();
                 if (!detection.success) {
                     return {
@@ -388,28 +432,53 @@ class JiraIntegration {
                 }
             }
             
-            const storyPointsField = this.config.storyPointsField || 'customfield_10016';
+            const storyPointsField = this.config.storyPointsField;
+            console.log(`📝 Using story points field: ${storyPointsField} for ${this.config.url}`);
+            
             const updateBody = {
                 fields: {
                     [storyPointsField]: storyPoints
                 }
             };
 
+            console.log(`📤 Sending update request for ${issueKey}:`, updateBody);
+            
             await this.makeJiraRequest(`/rest/api/3/issue/${issueKey}`, {
                 method: 'PUT',
                 body: updateBody
             });
 
+            console.log(`✅ Successfully updated ${issueKey} with ${storyPoints} story points`);
+
             // Add comment if provided
             if (comment) {
                 await this.addComment(issueKey, comment);
+                console.log(`💬 Added comment to ${issueKey}`);
             }
 
-            return { success: true };
+            return { 
+                success: true,
+                fieldUsed: storyPointsField,
+                jiraInstance: this.config.url
+            };
         } catch (error) {
+            console.error(`❌ Error updating story points for ${issueKey}:`, error.message);
+            
+            // If field error, suggest re-detection
+            if (error.message.includes('cannot be set') || error.message.includes('unknown')) {
+                console.log(`🔍 Field error detected, may need to re-detect story points field for ${this.config.url}`);
+                return {
+                    success: false,
+                    error: `${error.message} - Try clicking 'Detect Story Points Field' again for ${this.config.url}`,
+                    suggestRedetection: true,
+                    jiraInstance: this.config.url
+                };
+            }
+            
             return {
                 success: false,
-                error: error.message
+                error: error.message,
+                jiraInstance: this.config.url
             };
         }
     }
