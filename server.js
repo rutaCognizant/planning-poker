@@ -420,6 +420,18 @@ app.post('/api/jira/update-story-points', adminAuth.requireAdmin, async (req, re
   }
 });
 
+// Jira Field Detection API
+app.post('/api/jira/detect-story-points-field', async (req, res) => {
+  try {
+    console.log('🔍 Story Points field detection requested');
+    const result = await jira.detectStoryPointsField();
+    res.json(result);
+  } catch (error) {
+    console.error('Field detection error:', error);
+    res.status(500).json({ error: 'Failed to detect story points field' });
+  }
+});
+
 // Jira Backlog Management API Routes
 app.get('/api/jira/epics/:projectKey', adminAuth.requireAdmin, async (req, res) => {
   try {

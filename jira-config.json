@@ -3,7 +3,7 @@
   "email": "ruta.stankeviciene@cognizant.com",
   "projects": [],
   "enabled": true,
-  "storyPointsField": "customfield_10016",
+  "storyPointsField": null,
   "epicNameField": null,
   "selectedProject": null
 }

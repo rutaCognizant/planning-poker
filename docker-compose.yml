@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  rzzrzz-poker:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_PATH=/app/data/rzzrzz-poker.db
+      - SESSION_SECRET=${SESSION_SECRET:-change-this-secret-in-production}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH:-$$2a$$10$$gUouoZeaklF2hpxJ5cvGbuKCy2s4eygyAZ2nmja4lE7s5GmRQMkmi}
+    volumes:
+      - poker_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  poker_data:
+    driver: local

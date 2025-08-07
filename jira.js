@@ -151,16 +151,22 @@ class JiraIntegration {
                 console.log(`  ${field.id}: "${field.name}"`);
             });
             
-            // Look for story points related fields with multiple search patterns
+            // Look for story points related fields with comprehensive search patterns
             const storyPointsFields = customFields.filter(field => {
                 const name = field.name.toLowerCase();
                 return (
                     name.includes('story point') ||
                     name.includes('story points') ||
                     name.includes('story point estimate') ||
+                    name.includes('estimate') ||
+                    name.includes('points') ||
+                    name.includes('effort') ||
+                    name.includes('complexity') ||
                     name === 'points' ||
                     name === 'story points' ||
-                    name === 'story point estimate'
+                    name === 'story point estimate' ||
+                    name === 'estimate' ||
+                    name === 'effort points'
                 );
             });
             
@@ -213,70 +219,43 @@ class JiraIntegration {
                     allCustomFields: customFields.map(f => ({ id: f.id, name: f.name }))
                 };
             }
-            
-            // Get field configurations to find Story Points field
-            const fields = await this.makeJiraRequest('/rest/api/3/field');
-            
-            // Look for Story Points field by name
-            const storyPointsField = fields.find(field => 
-                field.id === 'customfield_10016' || // your specific Jira instance field (priority)
-                field.name.toLowerCase().includes('story point estimate') ||
-                field.name.toLowerCase().includes('story points') ||
-                field.name.toLowerCase().includes('story point') ||
-                field.name.toLowerCase() === 'points' ||
-                field.id === 'customfield_10015' // fallback to other common default
-            );
-            
-            if (storyPointsField) {
-                this.config.storyPointsField = storyPointsField.id;
-                this.saveConfig();
-                return {
-                    success: true,
-                    fieldId: storyPointsField.id,
-                    fieldName: storyPointsField.name
-                };
-            } else {
-                // Try alternative method - look at create metadata for a story
-                try {
-                    const projects = await this.getProjects();
-                    if (projects.success && projects.projects.length > 0) {
-                        const projectKey = projects.projects[0].key;
-                        const metadata = await this.makeJiraRequest(`/rest/api/3/issue/createmeta?projectKeys=${projectKey}&expand=projects.issuetypes.fields`);
-                        
-                        if (metadata.projects && metadata.projects[0] && metadata.projects[0].issuetypes) {
-                            for (const issueType of metadata.projects[0].issuetypes) {
-                                if (issueType.fields) {
-                                    for (const [fieldId, fieldInfo] of Object.entries(issueType.fields)) {
-                                        if (fieldInfo.name && (
-                                            fieldInfo.name.toLowerCase().includes('story point estimate') ||
-                                            fieldInfo.name.toLowerCase().includes('story point')
-                                        )) {
-                                            this.config.storyPointsField = fieldId;
-                                            this.saveConfig();
-                                            return {
-                                                success: true,
-                                                fieldId: fieldId,
-                                                fieldName: fieldInfo.name
-                                            };
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (metaError) {
-                    console.error('Error getting create metadata:', metaError);
-                }
-                
-                return {
-                    success: false,
-                    error: 'Story Points field not found. Please check your Jira configuration.'
-                };
-            }
         } catch (error) {
             return {
                 success: false,
                 error: error.message
+            };
+        }
+    }
+
+    // Validate if a field can be updated for a specific issue
+    async validateStoryPointsField(issueKey, fieldId) {
+        try {
+            console.log(`🔍 VALIDATING FIELD ${fieldId} FOR ISSUE ${issueKey}`);
+            
+            // Get issue metadata to check available fields
+            const editmeta = await this.makeJiraRequest(`/rest/api/3/issue/${issueKey}/editmeta`);
+            
+            // Check if the field is in the editable fields
+            const availableFields = editmeta.fields || {};
+            const isFieldAvailable = availableFields.hasOwnProperty(fieldId);
+            
+            console.log(`📋 AVAILABLE FIELDS FOR ${issueKey}:`, Object.keys(availableFields));
+            console.log(`✅ FIELD ${fieldId} AVAILABLE: ${isFieldAvailable}`);
+            
+            return {
+                success: isFieldAvailable,
+                fieldId: fieldId,
+                issueKey: issueKey,
+                availableFields: Object.keys(availableFields)
+            };
+            
+        } catch (error) {
+            console.error(`❌ FIELD VALIDATION ERROR:`, error.message);
+            return {
+                success: false,
+                error: error.message,
+                fieldId: fieldId,
+                issueKey: issueKey
             };
         }
     }
@@ -434,6 +413,46 @@ class JiraIntegration {
             
             const storyPointsField = this.config.storyPointsField;
             console.log(`📝 Using story points field: ${storyPointsField} for ${this.config.url}`);
+            
+            // Validate field before attempting update
+            console.log(`🔍 Validating field ${storyPointsField} for issue ${issueKey}...`);
+            const validation = await this.validateStoryPointsField(issueKey, storyPointsField);
+            
+            if (!validation.success) {
+                console.log(`❌ Field validation failed. Available fields:`, validation.availableFields);
+                
+                // Try to find a suitable field from available ones
+                if (validation.availableFields && validation.availableFields.length > 0) {
+                    const possibleFields = validation.availableFields.filter(field => 
+                        field.includes('customfield_') && (
+                            field.includes('10') || // Common story points patterns
+                            field.includes('11') ||
+                            field.includes('12') ||
+                            field.includes('13') ||
+                            field.includes('14') ||
+                            field.includes('15')
+                        )
+                    );
+                    
+                    if (possibleFields.length > 0) {
+                        console.log(`🔍 Suggesting re-detection. Possible fields found:`, possibleFields);
+                        return {
+                            success: false,
+                            error: `Field '${storyPointsField}' is not available for issue ${issueKey}. Available custom fields: ${possibleFields.join(', ')}. Please re-detect the Story Points field.`,
+                            suggestRedetection: true,
+                            availableFields: possibleFields,
+                            jiraInstance: this.config.url
+                        };
+                    }
+                }
+                
+                return {
+                    success: false,
+                    error: `Field '${storyPointsField}' cannot be updated for issue ${issueKey}. ${validation.error || 'Field not found in editable fields.'}`,
+                    suggestRedetection: true,
+                    jiraInstance: this.config.url
+                };
+            }
             
             const updateBody = {
                 fields: {

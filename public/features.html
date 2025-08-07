@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦟 RzzRzz Poker - Features Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .features-header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 40px;
+        }
+        
+        .features-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .features-header .subtitle {
+            font-size: 1.2rem;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .features-header .description {
+            font-size: 1rem;
+            color: #64748b;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .feature-section {
+            margin-bottom: 50px;
+        }
+        
+        .feature-section h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .feature-section h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #4a5568;
+            margin: 25px 0 15px 0;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            display: flex;
+            align-items: flex-start;
+            line-height: 1.5;
+        }
+        
+        .feature-list li::before {
+            content: "✅";
+            margin-right: 12px;
+            font-size: 1.1em;
+            flex-shrink: 0;
+        }
+        
+        .feature-list li strong {
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .back-nav {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+        
+        .back-nav .btn {
+            background: rgba(255, 255, 255, 0.95);
+            color: #667eea;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .back-nav .btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .code-block {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Monaco', 'Consolas', monospace;
+            overflow-x: auto;
+        }
+        
+        .version-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-left: 15px;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .feature-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .feature-card h4 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            border-radius: 12px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+            color: white !important;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            color: white !important;
+        }
+        
+        @media (max-width: 768px) {
+            .features-container {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            .features-header h1 {
+                font-size: 2rem;
+            }
+            
+            .back-nav {
+                position: relative;
+                top: 0;
+                left: 0;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="back-nav">
+        <a href="/" class="btn">← Back to App</a>
+    </div>
+
+    <div class="features-container">
+        <div class="features-header">
+            <h1>🦟 RzzRzz Poker</h1>
+            <div class="subtitle">Comprehensive Feature Documentation <span class="version-badge">v2.5.1</span></div>
+            <div class="description">
+                RzzRzz Poker is a modern, feature-rich online planning poker application designed for agile teams to estimate user stories collaboratively. Built with Node.js, Socket.IO, and integrated with Jira, it provides real-time collaboration with comprehensive administrative features.
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-item">
+                <span class="stat-number">80+</span>
+                <div class="stat-label">Features Implemented</div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">100%</span>
+                <div class="stat-label">Real-Time Collaboration</div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">Full</span>
+                <div class="stat-label">Jira Integration</div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">Zero</span>
+                <div class="stat-label">Configuration Setup</div>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <h2>🚀 Core Planning Poker Features</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Real-Time Collaboration</h4>
+                    <ul class="feature-list">
+                        <li><strong>Multi-Room Support</strong> - Create and join multiple estimation rooms simultaneously</li>
+                        <li><strong>Real-Time Voting</strong> - Live updates using WebSocket technology (Socket.IO)</li>
+                        <li><strong>Fibonacci Sequence Cards</strong> - Standard planning poker values: 0, ½, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, ?, ☕</li>
+                        <li><strong>Anonymous Voting</strong> - Votes hidden until reveal to prevent bias</li>
+                        <li><strong>Vote Statistics</strong> - Automatic calculation of average, median, min, max values</li>
+                        <li><strong>User Management</strong> - Track participants with names and voting status</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>Room Management</h4>
+                    <ul class="feature-list">
+                        <li><strong>Easy Room Creation</strong> - Generate unique room IDs with custom names</li>
+                        <li><strong>Room Sharing</strong> - Copy room ID to clipboard for easy sharing</li>
+                        <li><strong>Persistent Sessions</strong> - Rooms maintain state across connections</li>
+                        <li><strong>Auto-Cleanup</strong> - Rooms automatically deleted when empty</li>
+                        <li><strong>User Presence</strong> - Real-time display of who's in the room</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>Story Management</h4>
+                    <ul class="feature-list">
+                        <li><strong>Story Input</strong> - Set user stories or descriptions for estimation</li>
+                        <li><strong>Multi-line Support</strong> - Textarea for detailed story descriptions</li>
+                        <li><strong>Story History</strong> - Track what stories were estimated</li>
+                        <li><strong>Clear Workflow</strong> - Set story → Vote → Reveal → Clear cycle</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <h2>🔗 Jira Integration Features</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Complete Jira Connectivity</h4>
+                    <ul class="feature-list">
+                        <li><strong>Jira Cloud Integration</strong> - Connect to any Jira Cloud instance</li>
+                        <li><strong>API Token Authentication</strong> - Secure authentication with Jira API tokens</li>
+                        <li><strong>Connection Testing</strong> - Verify Jira connectivity before use</li>
+                        <li><strong>Project Management</strong> - Browse and select from all accessible Jira projects</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>Story Points Management</h4>
+                    <ul class="feature-list">
+                        <li><strong>Auto-Detection</strong> - Automatically detect Story Points custom field in Jira</li>
+                        <li><strong>Field Configuration</strong> - Support for different Story Points field configurations</li>
+                        <li><strong>Direct Updates</strong> - Save estimation results directly to Jira stories</li>
+                        <li><strong>Comment Integration</strong> - Add estimation context as Jira comments</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>Story Import & Search</h4>
+                    <ul class="feature-list">
+                        <li><strong>JQL Search</strong> - Full JQL (Jira Query Language) support for advanced queries</li>
+                        <li><strong>Quick Filters</strong> - Pre-configured filters for unestimated, current sprint, backlog</li>
+                        <li><strong>Project Filtering</strong> - Filter stories by selected project</li>
+                        <li><strong>Story Details</strong> - Display key, summary, description, status, assignee, priority</li>
+                        <li><strong>One-Click Import</strong> - Import Jira stories directly into poker sessions</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>Backlog Management</h4>
+                    <ul class="feature-list">
+                        <li><strong>Epic Management</strong> - Create and manage epics directly from the admin panel</li>
+                        <li><strong>Story Creation</strong> - Create new stories with epic linking</li>
+                        <li><strong>Epic Detection</strong> - Auto-detect Epic Name fields for proper epic creation</li>
+                        <li><strong>Project Selection</strong> - Set default project for room estimation sessions</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <h2>🔧 Administrative Features</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Admin Dashboard</h4>
+                    <ul class="feature-list">
+                        <li><strong>Secure Login</strong> - Bcrypt-hashed password authentication with sessions</li>
+                        <li><strong>Real-Time Statistics</strong> - Today's actions, total actions, unique users, active rooms</li>
+                        <li><strong>Activity Monitoring</strong> - Comprehensive logging of all user actions</li>
+                        <li><strong>Advanced Filtering</strong> - Filter actions by date, user, action type</li>
+                        <li><strong>Auto-Refresh</strong> - Dashboard updates every 30 seconds</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>Database Management</h4>
+                    <ul class="feature-list">
+                        <li><strong>SQLite Integration</strong> - File-based database with zero configuration</li>
+                        <li><strong>Action Logging</strong> - Comprehensive logging of all system activities</li>
+                        <li><strong>Database Download</strong> - Export complete database for backup</li>
+                        <li><strong>Query Performance</strong> - Optimized with proper indexing</li>
+                        <li><strong>Data Persistence</strong> - Survives server restarts and deployments</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>User Activity Tracking</h4>
+                    <ul class="feature-list">
+                        <li><strong>Room Activities</strong> - Track room creation, joins, leaves</li>
+                        <li><strong>Voting Analytics</strong> - Log all votes cast and reveals</li>
+                        <li><strong>Story Management</strong> - Track story updates and changes</li>
+                        <li><strong>Admin Actions</strong> - Log all administrative activities</li>
+                        <li><strong>Jira Integration</strong> - Track Jira API calls and updates</li>
+                        <li><strong>IP & User Agent</strong> - Security tracking with client information</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <h2>🛠️ Getting Started</h2>
+            
+            <h3>Quick Start</h3>
+            <div class="code-block">
+# Clone and install<br>
+git clone &lt;repository&gt;<br>
+cd planning-poker<br>
+npm install<br><br>
+
+# Development mode<br>
+npm run dev<br><br>
+
+# Production mode<br>
+npm start
+            </div>
+            
+            <h3>Access Points</h3>
+            <ul class="feature-list">
+                <li><strong>Main Application</strong> - http://localhost:3000</li>
+                <li><strong>Admin Dashboard</strong> - http://localhost:3000/admin.html</li>
+                <li><strong>Features Documentation</strong> - http://localhost:3000/features.html</li>
+            </ul>
+            
+            <h3>Default Admin Credentials</h3>
+            <ul class="feature-list">
+                <li><strong>Username:</strong> admin</li>
+                <li><strong>Password:</strong> rzzrzz123</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; padding: 40px 0; border-top: 2px solid #e2e8f0; margin-top: 50px;">
+            <h2 style="color: #667eea; margin-bottom: 15px;">🦟 RzzRzz Poker</h2>
+            <p style="font-size: 1.1rem; color: #64748b; font-style: italic;">
+                Making agile estimation collaborative, efficient, and enjoyable!
+            </p>
+        </div>
+    </div>
+
+    <!-- Version Info -->
+    <div id="version-info" class="version-info">
+        <div class="version-content">
+            <span id="version-text">Loading...</span>
+            <span id="environment-badge" class="environment-badge">DEV</span>
+        </div>
+    </div>
+
+    <script>
+        // Version Info Functions
+        async function loadVersionInfo() {
+            try {
+                const response = await fetch('/api/version/short');
+                const versionData = await response.json();
+                
+                const versionText = document.getElementById('version-text');
+                const environmentBadge = document.getElementById('environment-badge');
+                
+                if (versionText && environmentBadge) {
+                    versionText.textContent = `v${versionData.version}`;
+                    environmentBadge.textContent = versionData.environment.toUpperCase();
+                    environmentBadge.className = `environment-badge ${versionData.environment}`;
+                }
+            } catch (error) {
+                console.error('Failed to load version info:', error);
+                const versionText = document.getElementById('version-text');
+                if (versionText) {
+                    versionText.textContent = 'v2.5.1';
+                }
+            }
+        }
+
+        // Load version info on page load
+        document.addEventListener('DOMContentLoaded', loadVersionInfo);
+    </script>
+</body>
+</html>
